@@ -1,17 +1,18 @@
-// Garage – Google Apps Script backend, version 7.
+// Garage – Google Apps Script backend, version 8.
 // Sheets sync, Calendar reminders, Maps location, Drive receipts, daily Drive backups, an error log,
 // and (new in 7) a read-only Finance link: the car loan balance and insurance sinking fund from your
-// Finance (Ledger) Google Sheet.
+// Finance (Ledger) Google Sheet, and (new in 8) receipt scanning with Google Drive's text recognition.
 //
 // Setup after pasting this file:
 // 1) Put your own long secret word in TOKEN below (the same one you type in Garage > Settings).
 //    Tip: Garage > Settings > "Make a strong secret word" makes one for you.
 // 2) For the Finance link: Project Settings > Script Properties > Add property
 //    FINANCE_SHEET_ID = the ID of your Finance Sheet (the long part of its address between /d/ and /edit).
-// 3) Choose "authorize" in the toolbar and click Run once (it asks to allow the new Finance access).
-// 4) Deploy > Manage deployments > pencil icon > Version: New version > Deploy.
+// 3) For receipt scanning: in the editor's left bar, Services (+) > Drive API > Add.
+// 4) Choose "authorize" in the toolbar and click Run once (it asks to allow the new access).
+// 5) Deploy > Manage deployments > pencil icon > Version: New version > Deploy.
 const TOKEN = 'CHANGE_ME';
-const VERSION = 7;
+const VERSION = 8;
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function authorize() {
@@ -48,6 +49,7 @@ function route(b) {
     case 'backups': return listBackups();
     case 'getbackup': return getBackup(b.fid);
     case 'finance': return garageFinance_();
+    case 'ocr': return ocr(b);
     case 'snap': return withLock(() => ({ name: saveBackup(Object.values(readData(dataSheet())), 'before-restore') }));
     case undefined: case null: case '': case 'sync': return withLock(() => syncAll(b));
     default: return { error: 'Unknown action: ' + String(b.action).slice(0, 40) };
@@ -231,6 +233,23 @@ function getBackup(fid) {
   return { data: f.getBlob().getDataAsString() };
 }
 
+// ---------- Receipt scanning ----------
+// Turns the photo into a temporary Google Doc with Drive's text recognition, reads the text, then bins the Doc.
+// Needs the Drive API advanced service (Services > + > Drive API). The app picks out the amounts itself.
+function ocr(b) {
+  const mime = String(b.mime || '');
+  if (!/^(image\/(jpeg|png)|application\/pdf)$/.test(mime)) return { error: 'File type not allowed' };
+  const data = String(b.data || '');
+  if (!data || data.length > 8e6) return { error: 'File too large' };
+  if (typeof Drive === 'undefined') return { text: '', ocrError: 'Turn on Drive API in Apps Script (Services > + > Drive API), then deploy a new version' };
+  const blob = Utilities.newBlob(Utilities.base64Decode(data), mime, 'garage-scan');
+  let id;
+  if (Drive.Files.create) id = Drive.Files.create({ name: 'garage-scan', mimeType: 'application/vnd.google-apps.document' }, blob, { ocrLanguage: 'en', fields: 'id' }).id;
+  else id = Drive.Files.insert({ title: 'garage-scan', mimeType: 'application/vnd.google-apps.document' }, blob, { ocr: true, ocrLanguage: 'en' }).id;
+  try { return { text: DocumentApp.openById(id).getBody().getText().slice(0, 20000) }; }
+  finally { try { DriveApp.getFileById(id).setTrashed(true); } catch (x) {} }
+}
+
 // ---------- Finance link (read-only) ----------
 // Reads the readable "Accounts" and "Goals" tabs that the Finance (Ledger) app writes, never its
 // private _data tab, and never writes anything. Mirrors the link the other way (Ledger reads this
@@ -290,6 +309,7 @@ function health() {
     backups: bf.hasNext() ? { url: bf.next().getUrl(), last: P.getProperty('bkDay') || '' } : null,
     calendar: !!CalendarApp.getCalendarsByName('Car Log')[0],
     finance: finance,
+    ocr: typeof Drive !== 'undefined',
     errors: n,
     recent: n ? lg.getRange(Math.max(2, lg.getLastRow() - 4), 1, Math.min(5, n), 3).getValues().map(r => [new Date(r[0]).getTime(), String(r[1]), String(r[2]).slice(0, 200)]).reverse() : []
   };
