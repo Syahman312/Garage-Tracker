@@ -64,6 +64,7 @@ input,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:
 label{font-size:13px;color:var(--mu)}
 input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px!important}
 .chip{display:inline-block;padding:6px 12px;margin:3px 4px 3px 0;border:1px solid var(--bd);border-radius:99px;font-size:14px;cursor:pointer;background:var(--bg);user-select:none}
+.whob{display:flex;height:8px;border-radius:99px;overflow:hidden;gap:2px;margin:8px 0 4px}.whob i{display:block;min-width:4px}
 .chip.on{background:var(--ac);color:var(--bg);border-color:var(--ac)}
 .chip b{margin-left:8px;opacity:.6;padding:0 2px}
 nav{position:fixed;bottom:0;left:0;right:0;z-index:4;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom)}
@@ -369,7 +370,7 @@ const done=id=>openF('log',null,D.items.find(i=>i.id===id));
 const shrink=(f,m=1200,t='image/jpeg',q=.8)=>new Promise((r,j)=>{const i=new Image,u=URL.createObjectURL(f);i.onload=()=>{const s=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*s;c.height=i.height*s;c.getContext('2d').drawImage(i,0,0,c.width,c.height);URL.revokeObjectURL(u);r(c.toDataURL(t,q))};i.onerror=j;i.src=u});
 $('#f').onsubmit=async e=>{e.preventDefault();if(!sel.size)return alert('Pick at least one item, or add your own.');if(kind==='log'&&!okOdo(+$('#fo').value,editId))return;
 const g=i=>$('#'+i).value.trim(),now=Date.now();let it=editId&&D.items.find(i=>i.id===editId);
-if(!it){it={id:uid(),kind,carId:cur().id};D.items.push(it)}
+if(!it){it={id:uid(),kind,carId:cur().id,by:WHO()};D.items.push(it)}
 Object.assign(it,kind==='log'?{shop:g('fsh')}:{},{item:[...sel].join(', '),date:g('fd'),odo:g('fo')?+g('fo'):'',...(kind==='log'?(()=>{const pr={};sel.forEach(n=>{if(+PR[n])pr[n]=+PR[n]});const o=+g('fe')||0,c=Object.values(pr).reduce((a,v)=>a+v,0)+o;return{prices:pr,other:o,cost:c||''}})():{cost:''}),notes:g('fn'),updated:now,...(kind==='todo'?{rpm:+g('rpm')||0,rpk:+g('rpk')||0,mode:$('#rmd').value}:{})});
 const f=$('#fp').files[0];
 if(f){try{const pdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name);await kv('put','p:'+it.id,pdf?await rd(f):await rcpt(f));it.ph=1;it.pt=pdf?'pdf':'img';if(it.rid){D.cfg.drop=[...(D.cfg.drop||[]),it.rid];it.rid=''}}catch(x){alert('Could not read that file.')}}else if(rmPh){it.ph=0;it.pt='';if(it.rid){D.cfg.drop=[...(D.cfg.drop||[]),it.rid];it.rid=''}kv('put','p:'+it.id,null)}
@@ -409,7 +410,7 @@ $('#ut').onchange=()=>{const p=fpOf($('#ut').value);if(p){$('#ur').value=p.toFix
 $('#fpc').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.set){$('#fu').close();return fpEdit()}$('#ut').value=b.dataset.t;$('#ut').onchange();buzz(5)};
 ['ur','ul','uc'].forEach(k=>$('#'+k).oninput=()=>{const p=+$('#ur').value,l=+$('#ul').value,c=+$('#uc').value;
 if(k==='uc'){if(p)$('#ul').value=(c/p).toFixed(2);else if(l)$('#ur').value=(c/l).toFixed(3)}else if(p&&l)$('#uc').value=(p*l).toFixed(2);else if(p&&c)$('#ul').value=(c/p).toFixed(2)});
-$('#uf').onsubmit=e=>{e.preventDefault();if(!okOdo(+$('#uo').value,editU))return;const g=i=>$('#'+i).value.trim();let it=editU&&D.items.find(i=>i.id===editU);if(!it){it={id:uid(),kind:'fuel',carId:cur().id};D.items.push(it)}
+$('#uf').onsubmit=e=>{e.preventDefault();if(!okOdo(+$('#uo').value,editU))return;const g=i=>$('#'+i).value.trim();let it=editU&&D.items.find(i=>i.id===editU);if(!it){it={id:uid(),kind:'fuel',carId:cur().id,by:WHO()};D.items.push(it)}
 Object.assign(it,{date:g('ud'),odo:g('uo')?+g('uo'):'',brand:FB,state:FS,area:g('ua'),ftype:g('ut'),ppl:+g('ur')||0,litres:+g('ul')||0,cost:+g('uc')||0,full:$('#uff').checked?1:0,updated:Date.now()});$('#fu').close();commit();toast(editU?'Fill-up updated':'Fill-up saved')};
 function delU(){const it=D.items.find(i=>i.id===editU);if(it)softDel(it,'fu','Fill-up deleted')}
 function effs(F){const s=F.filter(i=>i.odo).sort((a,b)=>a.odo-b.odo),o=[];let base=null,acc=0;for(const x of s){if(base===null){if(x.full!==0)base=x.odo;continue}acc+=+x.litres||0;if(x.full!==0){const km=x.odo-base;if(km>0&&acc>0)o.push({id:x.id,d:x.date,y:km/acc,km,l:acc});base=x.odo;acc=0}}return o}
@@ -478,7 +479,7 @@ let h=`<div class="sh"><span>History</span><button class="lnk" onclick="FSRCH=!F
 (bs.length>1?`<div class="ftabs">${[['','All'],...bs.map(b=>[b,b])].map(([k,l])=>`<button class="${SF===k?'on':''}" data-f="${E(k)}" onclick="setSF(this.dataset.f)">${k?`<i style="background:${BC[k]||'#555'}"></i>`:''}${E(l)}</button>`).join('')}</div>`:'')+fuelSum(FQ,M);
 if(!FQ.length)return h+'<p class="m">No matches.</p>';const g={},T={};FQ.forEach(i=>{const k=(i.date||'').slice(0,7);T[k]=(T[k]||0)+(+i.cost||0)});FQ.slice(0,SHOW).forEach(i=>{const k=(i.date||'').slice(0,7);(g[k]=g[k]||[]).push(i)});
 return h+Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${k?new Date(k+'-01T00:00').toLocaleString('en-GB',{month:'long',year:'numeric'}):'No date'}</span><span>${rm(T[k])}</span></div><div class="flist">`+g[k].map(i=>{const e=M[i.id];
-return `<div class="frow" onclick="openU('${E(i.id)}')"><i class="fdot" style="background:${BC[i.brand]||'#555'}"></i><div class="fmid"><b>${E([i.brand,i.ftype].filter(Boolean).join(' · ')||i.place||'Fill-up')}</b><div class="m">${sd(i.date)} · ${(+i.litres||0).toFixed(1)} L${+i.ppl?' · RM '+(+i.ppl).toFixed(2):''}</div></div><div class="fend"><b>${rm(i.cost)}</b><div class="m">${i.full===0?'Partial':e?e.y.toFixed(1)+' km/L'+(i.id===BEST?' · best':dlt(e.y,AV)):''}</div></div></div>`}).join('')+'</div>').join('')+
+return `<div class="frow" onclick="openU('${E(i.id)}')"><i class="fdot" style="background:${BC[i.brand]||'#555'}"></i><div class="fmid"><b>${E([i.brand,i.ftype].filter(Boolean).join(' · ')||i.place||'Fill-up')}</b><div class="m">${sd(i.date)} · ${(+i.litres||0).toFixed(1)} L${+i.ppl?' · RM '+(+i.ppl).toFixed(2):''}${byT(i)}</div></div><div class="fend"><b>${rm(i.cost)}</b><div class="m">${i.full===0?'Partial':e?e.y.toFixed(1)+' km/L'+(i.id===BEST?' · best':dlt(e.y,AV)):''}</div></div></div>`}).join('')+'</div>').join('')+
 (FQ.length>SHOW?`<button class="g mt" style="width:100%" onclick="SHOW+=120;render()">Show older fill-ups (${FQ.length-SHOW} more)</button>`:'')}
 const LEG='',tp=(id,t)=>{const e=$('#'+id);if(e)e.textContent=t};
 function bars(d,id){let s=0;while(s<d.length-1&&!(d[s].a+d[s].b))s++;d=d.slice(s);const tt=d.reduce((t,x)=>t+x.a+x.b,0);if(!tt)return '<p class="m">Nothing spent in this period.</p>';
@@ -505,7 +506,7 @@ if(yr)for(let y=a.getFullYear();y<=z.getFullYear();y++)B.push({k:''+y,l:''+y,a:0
 return B}
 function put(B,F,L,fr,to,yr){const add=(x,f)=>x.filter(i=>i.date>=fr&&i.date<=to).forEach(i=>{const m=B.find(q=>q.k===i.date.slice(0,yr?4:7));if(m)m[f]+=+i.cost||0});add(F,'a');add(L,'b');return B}
 const kc=(t,i,c,v,rows)=>`<div class="c fz kc"><div class="m">${t}</div><div class="kv">${v}</div>${rows.map(([k,x])=>`<div class="r m"><span>${k}</span><span class="kx">${x}</span></div>`).join('')}</div>`,kc0=(t,i,c,v,rows)=>`<div class="c"><div style="display:flex;gap:8px;align-items:center"><span class="ic2" style="background:${c}">${i}</span><b style="color:${c}">${t}</b></div><div class="m mt">Total</div><div style="font-size:20px;font-weight:700;color:${c}">${v}</div><div style="border-top:1px solid var(--bd);margin-top:8px;padding-top:6px">${rows.map(([k,x])=>`<div class="r"><span class="m">${k}</span><b style="font-size:13px">${x}</b></div>`).join('')}</div></div>`;
-function reports(){return safe(syncWarn)+safe(checkin)+safe(heroCar)+safe(finTiles)+safe(xCard)+safe(overview)+reports0()}
+function reports(){return safe(syncWarn)+safe(checkin)+safe(heroCar)+safe(finTiles)+safe(xCard)+safe(whoCard)+safe(overview)+reports0()}
 function reports0(){const F=mine('fuel'),L=mine('log');if(!RT)RT=today();if(!RF)RF=iso(new Date(new Date().getFullYear(),new Date().getMonth()-11,1));
 const inR=i=>i.date>=RF&&i.date<=RT,FR=F.filter(inR),LR=L.filter(inR),A=[...FR,...LR],S2=(a,k)=>a.reduce((s,i)=>s+(+i[k]||0),0),od=A.filter(i=>i.odo).map(i=>+i.odo),dist=od.length>1?Math.max(...od)-Math.min(...od):0,
 ds=A.map(i=>i.date).sort(),days=ds.length>1?Math.max(1,Math.round((new Date(ds[ds.length-1])-new Date(ds[0]))/864e5)):0,fa=S2(FR,'cost'),sv=S2(LR,'cost'),tot=fa+sv,lt=S2(FR,'litres'),
@@ -677,7 +678,7 @@ function dCar(){const t=$('#kt').value,need=CARDOC(t);if(need&&!$('#kc').value&&
 $('#kt').onchange=()=>{const t=$('#kt').value;if(!editK)$('#kl').value=String(DTL(t)[3]);dCar()};
 $('#kf2').onsubmit=async ev=>{ev.preventDefault();const t=$('#kt').value,cid=$('#kc').value,dt=$('#kx').value,now=Date.now();
 if(CARDOC(t)&&!cid)return alert('Pick the car for this '+DTL(t)[1].toLowerCase()+'.');if(!dt&&!CARDOC(t)&&!$('#kf').files[0]&&!confirm('Save without an expiry date? You will not get a reminder.'))return;
-const id=CARDOC(t)?'doc-'+t+'-'+cid:(editK&&!editK.startsWith('car:')?editK:uid());let it=D.items.find(i=>i.id===id);if(!it){it={id,kind:'doc'};D.items.push(it)}
+const id=CARDOC(t)?'doc-'+t+'-'+cid:(editK&&!editK.startsWith('car:')?editK:uid());let it=D.items.find(i=>i.id===id);if(!it){it={id,kind:'doc',by:WHO()};D.items.push(it)}
 Object.assign(it,{dtype:t,carId:cid,name:CARDOC(t)?DTL(t)[1]:($('#kn').value.trim()||DTL(t)[1]),date:dt,lead:+$('#kl').value||0,ref:$('#kr').value.trim(),notes:$('#kno').value.trim(),deleted:0,updated:now});
 if(CARDOC(t)){const c=D.items.find(i=>i.id===cid);if(c&&c[CARF[t]]!==dt){c[CARF[t]]=dt;c.updated=now}}
 const f=$('#kf').files[0];if(f){try{const pdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name);await kv('put','p:'+it.id,pdf?await rd(f):await rcpt(f));it.ph=1;it.pt=pdf?'pdf':'img';if(it.rid){D.cfg.drop=[...(D.cfg.drop||[]),it.rid];it.rid=''}}catch(x){alert('Could not read that file.')}}
@@ -708,7 +709,7 @@ const LF=L.filter(fq).filter(sfq).sort((a,b)=>(b.date||'').localeCompare(a.date|
 h+=(FSRCH||Q?sb():'')+(top.length>1?`<div class="ftabs">${[['','All'],...top.map(n=>[n,n])].map(([k,l])=>`<button class="${SF===k?'on':''}" data-f="${E(k)}" onclick="setSF(this.dataset.f)">${E(l)}</button>`).join('')}</div>`:'')+svcSum(LF);
 if(!LF.length)return h+'<p class="m">'+(Q||SF?'No matches.':'No services yet. Tap + to add one.')+'</p>';
 const g={},T={};LF.forEach(i=>{const k=(i.date||'').slice(0,7);T[k]=(T[k]||0)+(+i.cost||0)});LF.slice(0,SHOW).forEach(i=>{const k=(i.date||'').slice(0,7);(g[k]=g[k]||[]).push(i)});
-return h+Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${k?new Date(k+'-01T00:00').toLocaleString('en-GB',{month:'long',year:'numeric'}):'No date'}</span><span>${rm(T[k])}</span></div><div class="flist">`+g[k].map(i=>{const its=(i.item||'').split(', ').filter(Boolean),sub=[sd(i.date),i.odo?km(i.odo):'',i.shop?E(i.shop):'',its.length>1?its.length+' items':'',i.ph?'📎':''].filter(Boolean).join(' · ');
+return h+Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${k?new Date(k+'-01T00:00').toLocaleString('en-GB',{month:'long',year:'numeric'}):'No date'}</span><span>${rm(T[k])}</span></div><div class="flist">`+g[k].map(i=>{const its=(i.item||'').split(', ').filter(Boolean),sub=[sd(i.date),i.odo?km(i.odo):'',i.shop?E(i.shop):'',its.length>1?its.length+' items':'',i.ph?'📎':'',byT(i).slice(3)].filter(Boolean).join(' · ');
 return `<div class="frow" onclick="openF('log','${E(i.id)}')"><span class="dico">${E(ico(its[0]||''))}</span><div class="fmid"><b>${E(i.item||'Service')}</b><div class="m">${sub}</div>${i.notes?`<div class="m">${E(i.notes)}</div>`:''}</div><div class="fend"><b>${i.cost!==''&&i.cost!=null?rm(i.cost):''}</b></div></div>`}).join('')+'</div>').join('')+
 (LF.length>SHOW?`<button class="g mt" style="width:100%" onclick="SHOW+=120;render()">Show older services (${LF.length-SHOW} more)</button>`:'')}
 // ---- Reports: one overview card instead of greeting + health ring + budget ----
@@ -780,7 +781,7 @@ $('#lrl').textContent=f?'Flat rate (% a year)':'Effective interest rate, EIR (% 
 const est=P>0&&n>0?(f?(P+P*r*n/12)/n:pmt(P,r/12,n)):0;$('#li').placeholder=est?'About '+est.toFixed(2):'From your agreement';
 $('#lhint').textContent=f?'Signed before 1 June 2026: interest is a flat rate on the full amount, and early settlement uses the Rule of 78 rebate.':'Signed from 1 June 2026 (Hire-Purchase (Amendment) Act 2026): interest is charged on the reducing balance, shown as the EIR.'}
 $('#lnf').onsubmit=e=>{e.preventDefault();const n=Math.round((+$('#lyr').value||0)*12),a=+$('#la').value;if(!(a>0&&n>0))return alert('Enter the amount financed and the tenure.');if(!$('#lfd').value)return alert('Enter the date of your first instalment.');
-let L=editL&&D.items.find(i=>i.id===editL);if(!L){L={id:uid(),kind:'loan'};D.items.push(L)}
+let L=editL&&D.items.find(i=>i.id===editL);if(!L){L={id:uid(),kind:'loan',by:WHO()};D.items.push(L)}
 Object.assign(L,{name:$('#ln').value.trim(),carId:$('#lc').value,lm:$('#lm').value,amt:a,n,rate:+$('#lr').value||0,date:$('#lfd').value,inst:+$('#li').value||0,notes:$('#lno').value.trim(),deleted:0,updated:Date.now()});
 $('#lnd').close();commit();toast(editL?'Loan updated':'Loan saved')};
 function delL(){const L=D.items.find(i=>i.id===editL);if(L)softDel(L,'lnd','Loan deleted')}
@@ -888,13 +889,13 @@ return `<div class="c fz cl" onclick="xSheet()"><div class="r"><span class="m">T
 function xSheet(){const X=mine('exp').sort((a,b)=>(b.date||'').localeCompare(a.date||'')),g={};X.forEach(i=>{(g[(i.date||'').slice(0,7)]=g[(i.date||'').slice(0,7)]||[]).push(i)});
 sheet(`<h2>Tolls, parking &amp; other</h2><div class="btns"><button class="btn sm" onclick="openX()">+ Add</button><button class="btn sm" onclick="$('#xcsv').click()">⬆ Import CSV</button></div><input id="xcsv" type="file" accept=".csv,text/csv,text/plain" hidden onchange="xImport(this)">
 <p class="m">CSV from the Touch ’n Go card portal, your bank, or any spreadsheet with a date, description and amount. Tolls and parking are picked out by name.</p>
-${X.length?Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${new Date(k+'-01T00:00').toLocaleString('en-GB',{month:'long',year:'numeric'})}</span><span>${rm(g[k].reduce((s,i)=>s+(+i.cost||0),0))}</span></div><div class="flist">${g[k].slice(0,80).map(i=>`<div class="frow" onclick="openX('${E(i.id)}')"><span class="dico">${xc(i.cat)[1]}</span><div class="fmid"><b>${E(i.place||xc(i.cat)[2])}</b><div class="m">${sd(i.date)} · ${xc(i.cat)[2]}${i.notes?' · '+E(i.notes):''}</div></div><div class="fend"><b>${rm(i.cost)}</b></div></div>`).join('')}</div>`).join(''):'<p class="m">Nothing logged yet.</p>'}`)}
+${X.length?Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${new Date(k+'-01T00:00').toLocaleString('en-GB',{month:'long',year:'numeric'})}</span><span>${rm(g[k].reduce((s,i)=>s+(+i.cost||0),0))}</span></div><div class="flist">${g[k].slice(0,80).map(i=>`<div class="frow" onclick="openX('${E(i.id)}')"><span class="dico">${xc(i.cat)[1]}</span><div class="fmid"><b>${E(i.place||xc(i.cat)[2])}</b><div class="m">${sd(i.date)} · ${xc(i.cat)[2]}${i.notes?' · '+E(i.notes):''}${byT(i)}</div></div><div class="fend"><b>${rm(i.cost)}</b></div></div>`).join('')}</div>`).join(''):'<p class="m">Nothing logged yet.</p>'}`)}
 function openX(id){const c=cur();if(!c)return;const x=id?D.items.find(i=>i.id===id)||{}:{date:today(),cat:'toll'};
 sheet(`<h2>${id?'Edit':'Add'} toll, parking or other</h2><div class="seg2" id="xcat" style="margin:6px 0 4px">${XC.map(([k,ic,l])=>`<button class="${x.cat===k?'on':''}" data-k="${k}" onclick="[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this))">${ic} ${l}</button>`).join('')}</div>
 <div class="row mt"><div><label for="xd">Date</label><input id="xd" type="date" value="${E(x.date||today())}"></div><div><label for="xa">Amount (RM)</label><input id="xa" type="number" inputmode="decimal" step="0.01" min="0" value="${x.cost||''}"></div></div>
 <label for="xp">Place</label><input id="xp" value="${E(x.place||'')}" maxlength="120" placeholder="e.g. Plaza Tol Sg Besi, KLCC parking"><label for="xn">Notes</label><input id="xn" value="${E(x.notes||'')}" maxlength="300">
 <div class="row"><button type="button" class="g" onclick="$('#gd').close()">Cancel</button>${id?`<button type="button" class="d" onclick="xDel('${E(id)}')">Delete</button>`:''}<button onclick="xSave(${id?`'${E(id)}'`:''})">Save</button></div>`);setTimeout(()=>{const a=$('#xa');if(a&&!id&&!matchMedia('(pointer:coarse)').matches)a.focus()},50)}
-function xSave(id){const a=+$('#xa').value,d=$('#xd').value;if(!(a>0)||!d)return toast('Enter the date and amount');let x=id&&D.items.find(i=>i.id===id);if(!x){x={id:uid(),kind:'exp',carId:cur().id};D.items.push(x)}
+function xSave(id){const a=+$('#xa').value,d=$('#xd').value;if(!(a>0)||!d)return toast('Enter the date and amount');let x=id&&D.items.find(i=>i.id===id);if(!x){x={id:uid(),kind:'exp',carId:cur().id,by:WHO()};D.items.push(x)}
 Object.assign(x,{date:d,cost:a,cat:($('#xcat .on')||{dataset:{k:'other'}}).dataset.k,place:$('#xp').value.trim(),notes:$('#xn').value.trim(),deleted:0,updated:Date.now()});$('#gd').close();commit();toast('Saved')}
 function xDel(id){const x=D.items.find(i=>i.id===id);if(x){$('#gd').close();x.deleted=1;x.updated=Date.now();save();render();toast('Deleted',()=>{x.deleted=0;x.updated=Date.now();commit()})}}
 // CSV import: finds the date, description and amount columns, keeps rows that look like tolls or parking.
@@ -917,7 +918,7 @@ const ref=('csv:'+d+':'+a.toFixed(2)+':'+desc.toLowerCase().replace(/[^a-z0-9]+/
 const sum=k=>XIMP.filter(x=>x.cat===k),t=k=>rm(sum(k).reduce((s,x)=>s+x.cost,0));
 sheet(`<h2>Import ${E(f.name)}</h2><div class="r mt"><span>🛣️ Tolls</span><b>${sum('toll').length} · ${t('toll')}</b></div><div class="r"><span>🅿️ Parking</span><b>${sum('parking').length} · ${t('parking')}</b></div>${sum('wash').length?`<div class="r"><span>🧽 Car wash</span><b>${sum('wash').length} · ${t('wash')}</b></div>`:''}
 <p class="m">${skip} other row${skip===1?'':'s'} skipped (not a toll or parking)${dup?`, ${dup} already imported`:''}. They go to ${E(cur().name)}.</p>${XIMP.length?`<button style="width:100%" onclick="xImportGo()">Import ${XIMP.length}</button>`:''}`)}
-function xImportGo(){const c=cur(),now=Date.now();XIMP.forEach(x=>D.items.push({id:uid(),kind:'exp',carId:c.id,notes:'Imported',...x,updated:now}));const n=XIMP.length;XIMP=[];$('#gd').close();commit();toast('Imported '+n)}
+function xImportGo(){const c=cur(),now=Date.now();XIMP.forEach(x=>D.items.push({id:uid(),kind:'exp',carId:c.id,notes:'Imported',by:WHO(),...x,updated:now}));const n=XIMP.length;XIMP=[];$('#gd').close();commit();toast('Imported '+n)}
 
 // ---- Receipt scanning: Garage's Google script reads the text (Google Drive OCR), the app picks out the numbers ----
 function parseReceipt(t){t=String(t||'').replace(/\r/g,'');const L=t.split('\n').map(s=>s.trim()).filter(Boolean),o={},num=s=>+String(s).replace(',','.'),M=[];
@@ -933,6 +934,37 @@ o.ftype=/budi/i.test(t)?'RON95 Subsidised':/ron\s*97|primax\s*97|v-?power\s*(rac
 if(o.ftype==='RON95'&&o.ppl){const P=D.cfg.fp||{},a=+P['RON95 Subsidised'],b=+P['RON95 Normal'];if(a||b)o.ftype=!b||(a&&Math.abs(o.ppl-a)<=Math.abs(o.ppl-b))?'RON95 Subsidised':'RON95 Normal'}
 const b=/petronas|shell|petron|caltex|\bbhp\b|five\s*petroleum/i.exec(t);if(b)o.brand={petronas:'Petronas',shell:'Shell',petron:'Petron',caltex:'Caltex'}[b[0].toLowerCase()]||'Others';
 o.shop=(L.find(l=>/sdn\.?\s*bhd|enterprise|auto|motor|service|workshop|tyre|garage|bengkel/i.test(l)&&!/receipt|invoice|resit|tax|date|tel|fax|www|@/i.test(l))||L.find(l=>/[a-z]{3}/i.test(l)&&!/receipt|invoice|resit|tax|date|no\.|tel|fax|www|@|\d{4,}/i.test(l))||'').replace(/\s{2,}/g,' ').slice(0,80);return o}
+// ---- Sharing: both phones use the same Google Sheet; each entry remembers who logged it
+const WHO=()=>(D.cfg.me||'').trim().slice(0,30);
+const JOINH=location.hash.startsWith('#join=')?location.hash:'';
+function people(){return cached('ppl','',()=>{const n={};D.items.forEach(i=>{if(i.by&&!i.deleted&&/^(log|fuel|exp)$/.test(i.kind))n[i.by]=(n[i.by]||0)+1});return Object.keys(n).sort((a,b)=>n[b]-n[a])})}
+const byT=i=>i.by&&people().length>1?' · '+E(i.by):'';
+function whoCard(){const P=people();if(P.length<2||!cur())return '';const m0=today().slice(0,7),t={};let all=0;
+['log','fuel','exp'].forEach(k=>mine(k).forEach(i=>{if(!(i.date||'').startsWith(m0))return;const v=+i.cost||0;t[i.by||'Earlier']=(t[i.by||'Earlier']||0)+v;all+=v}));
+const K=Object.keys(t).sort((a,b)=>t[b]-t[a]);if(!all)return '';
+return `<div class="c fz"><div class="m">Who paid · ${new Date(m0+'-01T00:00').toLocaleString('en-GB',{month:'long'})}</div><div class="whob">${K.map((k,j)=>`<i style="flex:${t[k]};background:${['var(--ac)','var(--amb)','#8b5cf6','#64748b'][j%4]}"></i>`).join('')}</div>${K.map((k,j)=>`<div class="r m" style="margin-top:4px"><span><i class="fdot" style="background:${['var(--ac)','var(--amb)','#8b5cf6','#64748b'][j%4]};display:inline-block;margin-right:6px"></i>${E(k)}</span><span>${rm(t[k])} · ${Math.round(t[k]/all*100)}%</span></div>`).join('')}</div>`}
+function joinLink(){const c=D.cfg;return location.origin+location.pathname+'#join='+btoa(unescape(encodeURIComponent(JSON.stringify({u:c.url,t:c.token}))))}
+function shareSheet(){const c=D.cfg,P=people(),ok=c.url&&c.token;
+sheet(`<h2>Share with partner</h2><p class="m">Both phones use the same Google Sheet. You each log fuel, services and tolls, and see each other's entries after a sync. Each entry shows who logged it.</p>
+<label class="f"><span>Your name</span><input id="shme" value="${E(c.me||'')}" maxlength="30" placeholder="e.g. Syahmi" onchange="cf('me',this.value.trim());render()"></label>
+${ok?`<div class="btns"><button class="btn pri" onclick="shareGo()">Send invite link</button><button class="btn" onclick="shareCopy()">Copy link</button></div>
+<p class="m" style="color:var(--amb)">The link holds your web app link and secret word. Send it only to your partner, in a private chat.</p>
+<p class="m">Your partner opens the link on their phone, enters their name and taps Join. Or they paste the same web app link and secret word in Settings.</p>`
+:`<p class="m" style="color:var(--amb)">Connect Google Sheets sync first (Settings → Connection). Sharing works through your sheet.</p>`}
+${P.length?`<h3>People</h3>${P.map(n=>`<div class="r m"><span>👤 ${E(n)}${n===WHO()?' (you)':''}</span><span>${(k=>k+(k===1?' entry':' entries'))(D.items.filter(i=>i.by===n&&!i.deleted).length)}</span></div>`).join('')}`:''}
+${!WHO()?'<p class="m">Add your name so your partner can see who logged what.</p>':''}`)}
+function shareNeedName(){const n=$('#shme')&&$('#shme').value.trim();if(n&&n!==D.cfg.me){D.cfg.me=n;save()}if(!WHO()){toast('Add your name first');$('#shme')&&$('#shme').focus();return 1}}
+async function shareGo(){if(shareNeedName())return;const u=joinLink();if(navigator.share){try{await navigator.share({title:'Join my Garage',text:WHO()+' invited you to share car records in Garage.',url:u});return}catch(e){if(e.name==='AbortError')return}}shareCopy()}
+async function shareCopy(){if(shareNeedName())return;try{await navigator.clipboard.writeText(joinLink());toast('Invite link copied')}catch(e){sheet(`<h2>Invite link</h2><textarea class="f" style="width:100%;height:120px" readonly onfocus="this.select()">${E(joinLink())}</textarea>`)}}
+addEventListener("hashchange",()=>{if(location.hash.startsWith("#join="))joinCheck()});
+function joinCheck(h){const m=/^#join=([A-Za-z0-9+/=]+)$/.exec(h||location.hash);if(!m)return 0;let j;try{j=JSON.parse(decodeURIComponent(escape(atob(m[1]))))}catch(e){}
+try{if(location.hash.startsWith('#join='))history.replaceState(null,'',location.pathname)}catch(e){}if(!j||!okUrl(j.u)||typeof j.t!=='string')return toast('That invite link is broken. Ask for a new one.'),0;
+const same=D.cfg.url===j.u&&D.cfg.token===j.t;
+sheet(`<h2>Join shared Garage</h2><p class="m">${same?'This phone is already connected to this garage.':'This phone will sync with your partner\'s Google Sheet. Entries already on this phone are kept and added to it.'}</p>
+<label class="f"><span>Your name</span><input id="jnme" value="${E(D.cfg.me||'')}" maxlength="30" placeholder="e.g. Aina"></label>
+<div class="btns"><button class="btn pri" id="jngo">Join</button><button class="btn" onclick="$('#gd').close()">Cancel</button></div>`);
+$('#jngo').onclick=async()=>{const n=$('#jnme').value.trim();if(!n)return toast('Enter your name');D.cfg.me=n;D.cfg.url=j.u;D.cfg.token=j.t;save();$('#gd').close();toast('Joining…');await sync(1);render();toast('Joined. You now share records.')};return 1}
+
 let SCN=null;
 function scanR(k){if(!D.cfg.url)return toast('Receipt scanning needs Google Sheets sync (Settings)');const i=document.createElement('input');i.type='file';i.accept='image/*,application/pdf';i.onchange=()=>scanGo(k,i.files[0]);i.click()}
 async function scanGo(k,f){if(!f)return;const pdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name),note=k==='fuel'?$('#gm'):$('#pv');if(note)note.textContent='Reading the receipt…';
@@ -975,7 +1007,7 @@ $('#gd').close();if(n){commit();go('todo');toast('Added '+n+' reminder'+(n>1?'s'
 function bdg(){if(!('Notification' in window))return toast('Open Garage from your Home Screen first');Notification.requestPermission().then(p=>{toast(p==='granted'?'Icon badge turned on':'Permission was not given');render()})}
 function badge(){if(!navigator.setAppBadge)return;const n=cars().reduce((s,c)=>s+remOf(c).filter(i=>st(i)>0).length,0);(n?navigator.setAppBadge(n):navigator.clearAppBadge()).catch(()=>{})}
 function memo(f){let k,v;return function(){const kk=VER+'|'+(D.cfg.sel||'')+'|'+today();if(kk!==k){v=f();k=kk}return v}}
-const APP_V='2026.11.23a',CODE_V=8;let DRE='',MISS=[];
+const APP_V='2026.11.24a',CODE_V=8;let DRE='',MISS=[];
 const logE=(a,m)=>{const x={t:Date.now(),a:String(a),m:String((m&&m.message)||m||'').replace(/token[^,;]*/gi,'token …').slice(0,300)};LOG.unshift(x);if(LOG.length>100)LOG.length=100;kv('put','log',LOG).catch(()=>{})};
 addEventListener('error',e=>logE('app',(e.message||'Error')+(e.lineno?' (line '+e.lineno+')':'')));addEventListener('unhandledrejection',e=>logE('app',e.reason));
 const okUrl=u=>/^https:\/\/script\.google\.com\/(a\/macros\/[\w.-]+|macros)\/s\/[\w-]{20,}\/(exec|dev)$/.test(u||'');
@@ -986,7 +1018,7 @@ catch(e){throw new Error(e.name==='AbortError'?'no reply from Google after '+Mat
 const tx=await r.text();let j;try{j=JSON.parse(tx)}catch(e){throw new Error(/<html/i.test(tx)?'Google sent a web page instead of data. Check the web app link and that access is set to Anyone':'unreadable reply from Google')}
 if(j&&j.error)throw new Error(j.error);return j}
 const NUMF=['amt','n','rate','inst','lead','budget','odo','cost','ppl','litres','tank','rpm','rpk','other','updated','full','ph','deleted'],DATEF=['date','rtax','ins','odoAt','sz'],IDF=['id','carId','rid'],
-STRF={shop:80,cat:10,phone:20,model:80,phsrc:200,phq:80,finLoan:80,finIns:80,lm:4,dtype:12,ref:60,kind:8,item:300,name:120,plate:20,year:8,colour:40,engine:40,notes:1000,brand:40,state:40,area:80,ftype:30,place:120,mode:4,pt:4,icon:8};
+STRF={by:30,shop:80,cat:10,phone:20,model:80,phsrc:200,phq:80,finLoan:80,finIns:80,lm:4,dtype:12,ref:60,kind:8,item:300,name:120,plate:20,year:8,colour:40,engine:40,notes:1000,brand:40,state:40,area:80,ftype:30,place:120,mode:4,pt:4,icon:8};
 function clean(i){if(!i||typeof i!=='object'||Array.isArray(i))return null;if(typeof i.id!=='string'||!/^[\w.:-]{1,80}$/.test(i.id))return null;if(!['car','log','fuel','todo','svc','logo','doc','loan','shop','exp'].includes(i.kind))return null;const o={};
 for(const k of Object.keys(i)){const v=i[k];
 if(NUMF.includes(k)){if(v==='')o[k]='';else if(v!=null&&v!==''){const n=+v;if(isFinite(n))o[k]=n}}
@@ -1066,7 +1098,7 @@ const rico=i=>i.id==='rtax'?'🧾':i.id==='ins'?'🛡️':E(ico((i.item||'').spl
 function openSettings(){const c=D.cfg,d=$('#st'),y=d.open?d.scrollTop:0,L=live('log'),rp=L.filter(i=>i.ph).length,rd2=L.filter(i=>i.rid).length,lg=LOG.slice(0,LOGALL?100:4),
 sw=(id,on,lab,act)=>`<label class="switch"><span>${lab}</span><input type="checkbox" id="${id}" ${on?'checked':''} onchange="${act}"></label>`;
 $('#stc').innerHTML=`<h2>Settings</h2>
-<h3>You</h3><label class="f"><span>Name (for the greeting)</span><input id="s_me" value="${E(c.me||'')}" maxlength="30" autocomplete="given-name" onchange="cf('me',this.value.trim());render()"></label>${sw('s_fun',c.fun,'Show badges, level and streak',"cf('fun',this.checked?1:0);render()")}
+<h3>You</h3><label class="f"><span>Name (for the greeting)</span><input id="s_me" value="${E(c.me||'')}" maxlength="30" autocomplete="given-name" onchange="cf('me',this.value.trim());render()"></label>${sw('s_fun',c.fun,'Show badges, level and streak',"cf('fun',this.checked?1:0);render()")}<button class="btn" style="width:100%;margin-top:8px" onclick="shareSheet()">👥 Share with partner${people().length>1?' · '+people().length+' people':''}</button>
 <h3>Connection</h3>
 <label class="f"><span>Web app link</span><input id="s_url" value="${E(c.url||'')}" placeholder="https://script.google.com/macros/s/…/exec" inputmode="url" autocomplete="off" spellcheck="false"></label>
 <label class="f" for="s_tok"><span>Secret word (same as in Code.gs)</span></label><div class="pw"><input id="s_tok" type="password" value="${E(c.token||'')}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" oninput="tokLen()"><button type="button" class="pwb" id="s_eye" aria-label="Show secret word" aria-pressed="false" onclick="tokEye()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path class="pwx" d="M4 4l16 16"/></svg></button><button type="button" class="pwb" aria-label="Copy secret word" onclick="tokCopy()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><p class="m" id="s_tokm" style="margin:6px 0 0"></p>
@@ -1179,5 +1211,5 @@ navigator.serviceWorker.addEventListener('message',e=>{if(e.data==='updated'||(e
 addEventListener('popstate',()=>{const d=document.querySelector('dialog[open]');if(d){d.close();try{history.pushState(null,'','#'+SL[tab])}catch(e){}return}const h=location.hash.slice(1);if(cur()&&(h==='add-fuel'||h==='add-service')){go(h==='add-fuel'?'fuel':'log');return h==='add-fuel'?openU():openF('log')}const t=LS[h]||'rep';if(t!==tab)go(t,1)});
 {const _r3=render;render=function(){_r3();pill();clearTimeout(AT);AT=setTimeout(()=>{try{achCheck()}catch(e){}try{badge()}catch(e){}if(tab==='set')stq()},250)}}
 hs=memo(hs);achs=memo(achs);streak=memo(streak);
-load().then(()=>{try{fpMig()}catch(e){}setTimeout(()=>fpAutoLoad(),1500);PREV=D.cfg.seen||'';if(D.cfg.seen!==today()){D.cfg.seen=today();save()}if(!D.cfg.seeded){DEF.forEach(n=>addSvc(n,1));D.cfg.seeded=1;save()}const hs0=location.hash.slice(1);if(LS[hs0])tab=LS[hs0];render();if(cur()&&(hs0==='add-fuel'||hs0==='add-service')){go(hs0==='add-fuel'?'fuel':'log');hs0==='add-fuel'?openU():openF('log')}else if(!LS[hs0])try{history.replaceState(null,'','#'+SL[tab])}catch(e){}navigator.storage&&navigator.storage.persist&&navigator.storage.persist();sync()});
+load().then(()=>{try{fpMig()}catch(e){}setTimeout(()=>fpAutoLoad(),1500);PREV=D.cfg.seen||'';if(D.cfg.seen!==today()){D.cfg.seen=today();save()}if(!D.cfg.seeded){DEF.forEach(n=>addSvc(n,1));D.cfg.seeded=1;save()}if(JOINH)setTimeout(()=>joinCheck(JOINH),300);const hs0=location.hash.slice(1);if(LS[hs0])tab=LS[hs0];render();if(cur()&&(hs0==='add-fuel'||hs0==='add-service')){go(hs0==='add-fuel'?'fuel':'log');hs0==='add-fuel'?openU():openF('log')}else if(!LS[hs0])try{history.replaceState(null,'','#'+SL[tab])}catch(e){}navigator.storage&&navigator.storage.persist&&navigator.storage.persist();sync()});
 </script><div id="prt" aria-hidden="true"></div></body></html>
