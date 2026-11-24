@@ -257,7 +257,7 @@ main{position:relative;min-height:calc(100dvh - 200px);overflow-x:clip}html,body
 <div id="wr"><div class="row"><div><label for="rpm">Repeat every (months)</label><input id="rpm" type="number" min="0" inputmode="numeric"></div><div><label for="rpk">Repeat every (km)</label><input id="rpk" type="number" min="0" inputmode="numeric"></div></div><label for="rmd">When both a date and km are set</label><select id="rmd"><option value="or">Due at either one (whichever comes first)</option><option value="and">Due only when both are reached</option></select></div>
 <div id="wp"><label for="fp">Receipt (photo or PDF)</label><input id="fp" type="file" accept="image/*,application/pdf" onchange="prev(this)"><div id="pv" class="m" style="margin-bottom:8px"></div><div class="row" style="margin-bottom:12px"><button type="button" class="g" id="vp" onclick="viewP(editId)">View saved file</button><button type="button" class="g" id="rp" onclick="rmPh=1;this.hidden=true;$('#vp').hidden=true">Remove saved file</button></div></div>
 <div id="wsh"><label for="fsh">Workshop</label><input id="fsh" list="shl" autocomplete="off" maxlength="80" placeholder="e.g. Perodua Service Centre Kajang"><datalist id="shl"></datalist></div>
-<label for="fn">Notes</label><textarea id="fn" rows="2"></textarea>
+<div id="fpw"></div><label for="fn">Notes</label><textarea id="fn" rows="2"></textarea>
 <button type="button" class="g" id="fa" style="width:100%;margin-bottom:10px" onclick="const i=editId;$('#dlg').close();again(i)">↻ Log this again</button>
 <div class="row"><button type="button" class="g" onclick="$('#dlg').close()">Cancel</button><button type="button" class="d" id="fx" onclick="del()">Delete</button><button>Save</button></div></form></dialog>
 
@@ -306,7 +306,7 @@ main{position:relative;min-height:calc(100dvh - 200px);overflow-x:clip}html,body
 <div class="row"><div><label for="ur">Price per litre (RM)</label><input id="ur" type="number" inputmode="decimal" step="0.001" min="0"></div><div><label for="ul">Litres</label><input id="ul" type="number" inputmode="decimal" step="0.01" min="0" required></div></div>
 <label for="uc">Total cost (RM)</label><input id="uc" type="number" inputmode="decimal" step="0.01" min="0" required>
 <label class="m" style="display:flex;gap:8px;align-items:center;margin:0 0 12px"><input id="uff" type="checkbox" style="width:auto;margin:0" checked> Filled to a full tank (keeps km/L accurate)</label>
-<div class="row"><button type="button" class="g" onclick="$('#fu').close()">Cancel</button><button type="button" class="d" id="ux" onclick="delU()">Delete</button><button>Save</button></div></form></dialog>
+<div id="upw"></div><div class="row"><button type="button" class="g" onclick="$('#fu').close()">Cancel</button><button type="button" class="d" id="ux" onclick="delU()">Delete</button><button>Save</button></div></form></dialog>
 <dialog id="gd"><div id="gdc"></div><button class="g mt" style="width:100%" onclick="$('#gd').close()">Close</button></dialog>
 <dialog id="pd"><img id="pi" alt="Receipt"><iframe id="pf" title="PDF" hidden style="width:100%;height:68vh;border:0;border-radius:8px;background:#fff"></iframe><div id="pb" class="row mt"></div><button class="g mt" onclick="$('#pd').close()">Close</button></dialog>
 <script>
@@ -364,14 +364,14 @@ function openF(k,id,pre){kind=k;editId=id||null;doneId=pre?pre.id:null;rmPh=0;
 const L=k==='log',it=id?D.items.find(i=>i.id===id):pre?{item:pre.item,date:today(),odo:odoNow()||'',notes:pre.notes}:L?{date:today(),odo:odoNow()||''}:{};
 sel=new Set((it.item||'').split(', ').filter(Boolean));chips();
 $('#ft').textContent=(id?'Edit ':'Add ')+(L?'service':'reminder');$('#ld').textContent=L?'Date':'Due date';$('#lo').textContent=L?'Odometer (km)':'Due at (km)';
-$('#wc').hidden=$('#wp').hidden=!L;$('#wr').hidden=L;$('#rpm').value=it.rpm||'';$('#rpk').value=it.rpk||'';$('#rmd').value=it.mode||'or';$('#rp').hidden=!it.ph;$('#vp').hidden=!(it.ph&&id);$('#pv').innerHTML='';$('#fp').value='';$('#fd').required=L;$('#fx').hidden=!id;$('#wsh').hidden=$('#fscan').hidden=!L;$('#fsh').value=L?(it.shop||''):'';$('#shl').innerHTML=shops().map(x=>`<option value="${E(x.name)}">`).join('');$('#fa').hidden=!(id&&L);
+$('#wc').hidden=$('#wp').hidden=!L;$('#wr').hidden=L;$('#rpm').value=it.rpm||'';$('#rpk').value=it.rpk||'';$('#rmd').value=it.mode||'or';$('#rp').hidden=!it.ph;$('#vp').hidden=!(it.ph&&id);$('#pv').innerHTML='';$('#fp').value='';$('#fd').required=L;$('#fx').hidden=!id;payUI('fpw',L?it:null);$('#wsh').hidden=$('#fscan').hidden=!L;$('#fsh').value=L?(it.shop||''):'';$('#shl').innerHTML=shops().map(x=>`<option value="${E(x.name)}">`).join('');$('#fa').hidden=!(id&&L);
 $('#fd').value=it.date||'';$('#fo').value=it.odo||'';$('#fe').value=it.prices?(it.other||''):(it.cost||'');PR={...(it.prices||{})};prices();$('#fn').value=it.notes||'';$('#dlg').showModal()}
 const done=id=>openF('log',null,D.items.find(i=>i.id===id));
 const shrink=(f,m=1200,t='image/jpeg',q=.8)=>new Promise((r,j)=>{const i=new Image,u=URL.createObjectURL(f);i.onload=()=>{const s=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*s;c.height=i.height*s;c.getContext('2d').drawImage(i,0,0,c.width,c.height);URL.revokeObjectURL(u);r(c.toDataURL(t,q))};i.onerror=j;i.src=u});
 $('#f').onsubmit=async e=>{e.preventDefault();if(!sel.size)return alert('Pick at least one item, or add your own.');if(kind==='log'&&!okOdo(+$('#fo').value,editId))return;
 const g=i=>$('#'+i).value.trim(),now=Date.now();let it=editId&&D.items.find(i=>i.id===editId);
 if(!it){it={id:uid(),kind,carId:cur().id,by:WHO()};D.items.push(it)}
-Object.assign(it,kind==='log'?{shop:g('fsh')}:{},{item:[...sel].join(', '),date:g('fd'),odo:g('fo')?+g('fo'):'',...(kind==='log'?(()=>{const pr={};sel.forEach(n=>{if(+PR[n])pr[n]=+PR[n]});const o=+g('fe')||0,c=Object.values(pr).reduce((a,v)=>a+v,0)+o;return{prices:pr,other:o,cost:c||''}})():{cost:''}),notes:g('fn'),updated:now,...(kind==='todo'?{rpm:+g('rpm')||0,rpk:+g('rpk')||0,mode:$('#rmd').value}:{})});
+Object.assign(it,kind==='log'?{shop:g('fsh')}:{},{item:[...sel].join(', '),date:g('fd'),odo:g('fo')?+g('fo'):'',...(kind==='log'?(()=>{const pr={};sel.forEach(n=>{if(+PR[n])pr[n]=+PR[n]});const o=+g('fe')||0,c=Object.values(pr).reduce((a,v)=>a+v,0)+o;return{prices:pr,other:o,cost:c||''}})():{cost:''}),notes:g('fn'),updated:now,...(kind==='log'?payOf('fpw'):{}),...(kind==='todo'?{rpm:+g('rpm')||0,rpk:+g('rpk')||0,mode:$('#rmd').value}:{})});
 const f=$('#fp').files[0];
 if(f){try{const pdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name);await kv('put','p:'+it.id,pdf?await rd(f):await rcpt(f));it.ph=1;it.pt=pdf?'pdf':'img';if(it.rid){D.cfg.drop=[...(D.cfg.drop||[]),it.rid];it.rid=''}}catch(x){alert('Could not read that file.')}}else if(rmPh){it.ph=0;it.pt='';if(it.rid){D.cfg.drop=[...(D.cfg.drop||[]),it.rid];it.rid=''}kv('put','p:'+it.id,null)}
 if(doneId){const t=D.items.find(i=>i.id===doneId);if(t){t.deleted=1;t.updated=now;if(t.rpm||t.rpk){const n=new Date(it.date+'T00:00:00Z');if(t.rpm)n.setUTCMonth(n.getUTCMonth()+t.rpm);D.items.push({id:uid(),kind:'todo',carId:t.carId,item:t.item,notes:t.notes,rpm:t.rpm,rpk:t.rpk,mode:t.mode,date:t.rpm?n.toISOString().slice(0,10):'',odo:t.rpk&&it.odo?it.odo+t.rpk:'',cost:'',updated:now})}}doneId=null}
@@ -405,13 +405,13 @@ async function imp(inp){const f=inp.files[0];if(!f)return;try{const j=JSON.parse
 function openU(id){editU=id||null;const l=mine('fuel').sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0]||{},it=id?D.items.find(i=>i.id===id):{date:today(),odo:odoNow()||'',brand:l.brand,state:l.state,area:l.area,ftype:/^ron95$/i.test(l.ftype||'')?'RON95 Subsidised':l.ftype,ppl:fpOf(l.ftype)||l.ppl};
 $('#ut2').textContent=id?'Edit fill-up':'Add fill-up';
 [['ud','date'],['uo','odo'],['ua','area'],['ut','ftype'],['ur','ppl'],['ul','litres'],['uc','cost']].forEach(([k,f])=>$('#'+k).value=it[f]||'');
-FB=it.brand||'';FS=it.state||'';ddr('fbd',BR,FB,'b');ddr('fst',ST,FS,'s');$('#gm').textContent='';$('#uff').checked=it.full!==0;$('#ux').hidden=!id;fpChips();$('#fu').showModal()}
+FB=it.brand||'';FS=it.state||'';ddr('fbd',BR,FB,'b');ddr('fst',ST,FS,'s');$('#gm').textContent='';$('#uff').checked=it.full!==0;$('#ux').hidden=!id;payUI('upw',it);fpChips();$('#fu').showModal()}
 $('#ut').onchange=()=>{const p=fpOf($('#ut').value);if(p){$('#ur').value=p.toFixed(2);$('#ur').oninput()}fpChips()};$('#ut').oninput=fpChips;
 $('#fpc').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.set){$('#fu').close();return fpEdit()}$('#ut').value=b.dataset.t;$('#ut').onchange();buzz(5)};
 ['ur','ul','uc'].forEach(k=>$('#'+k).oninput=()=>{const p=+$('#ur').value,l=+$('#ul').value,c=+$('#uc').value;
 if(k==='uc'){if(p)$('#ul').value=(c/p).toFixed(2);else if(l)$('#ur').value=(c/l).toFixed(3)}else if(p&&l)$('#uc').value=(p*l).toFixed(2);else if(p&&c)$('#ul').value=(c/p).toFixed(2)});
 $('#uf').onsubmit=e=>{e.preventDefault();if(!okOdo(+$('#uo').value,editU))return;const g=i=>$('#'+i).value.trim();let it=editU&&D.items.find(i=>i.id===editU);if(!it){it={id:uid(),kind:'fuel',carId:cur().id,by:WHO()};D.items.push(it)}
-Object.assign(it,{date:g('ud'),odo:g('uo')?+g('uo'):'',brand:FB,state:FS,area:g('ua'),ftype:g('ut'),ppl:+g('ur')||0,litres:+g('ul')||0,cost:+g('uc')||0,full:$('#uff').checked?1:0,updated:Date.now()});$('#fu').close();commit();toast(editU?'Fill-up updated':'Fill-up saved')};
+Object.assign(it,{date:g('ud'),odo:g('uo')?+g('uo'):'',brand:FB,state:FS,area:g('ua'),ftype:g('ut'),ppl:+g('ur')||0,litres:+g('ul')||0,cost:+g('uc')||0,full:$('#uff').checked?1:0,...payOf('upw'),updated:Date.now()});$('#fu').close();commit();toast(editU?'Fill-up updated':'Fill-up saved')};
 function delU(){const it=D.items.find(i=>i.id===editU);if(it)softDel(it,'fu','Fill-up deleted')}
 function effs(F){const s=F.filter(i=>i.odo).sort((a,b)=>a.odo-b.odo),o=[];let base=null,acc=0;for(const x of s){if(base===null){if(x.full!==0)base=x.odo;continue}acc+=+x.litres||0;if(x.full!==0){const km=x.odo-base;if(km>0&&acc>0)o.push({id:x.id,d:x.date,y:km/acc,km,l:acc});base=x.odo;acc=0}}return o}
 let FPER='6',FMET='eco',FSRCH=0,CH=null;
@@ -506,7 +506,7 @@ if(yr)for(let y=a.getFullYear();y<=z.getFullYear();y++)B.push({k:''+y,l:''+y,a:0
 return B}
 function put(B,F,L,fr,to,yr){const add=(x,f)=>x.filter(i=>i.date>=fr&&i.date<=to).forEach(i=>{const m=B.find(q=>q.k===i.date.slice(0,yr?4:7));if(m)m[f]+=+i.cost||0});add(F,'a');add(L,'b');return B}
 const kc=(t,i,c,v,rows)=>`<div class="c fz kc"><div class="m">${t}</div><div class="kv">${v}</div>${rows.map(([k,x])=>`<div class="r m"><span>${k}</span><span class="kx">${x}</span></div>`).join('')}</div>`,kc0=(t,i,c,v,rows)=>`<div class="c"><div style="display:flex;gap:8px;align-items:center"><span class="ic2" style="background:${c}">${i}</span><b style="color:${c}">${t}</b></div><div class="m mt">Total</div><div style="font-size:20px;font-weight:700;color:${c}">${v}</div><div style="border-top:1px solid var(--bd);margin-top:8px;padding-top:6px">${rows.map(([k,x])=>`<div class="r"><span class="m">${k}</span><b style="font-size:13px">${x}</b></div>`).join('')}</div></div>`;
-function reports(){return safe(syncWarn)+safe(checkin)+safe(heroCar)+safe(finTiles)+safe(xCard)+safe(whoCard)+safe(overview)+reports0()}
+function reports(){return safe(syncWarn)+safe(checkin)+safe(heroCar)+safe(finTiles)+safe(xCard)+safe(walCard)+safe(whoCard)+safe(overview)+reports0()}
 function reports0(){const F=mine('fuel'),L=mine('log');if(!RT)RT=today();if(!RF)RF=iso(new Date(new Date().getFullYear(),new Date().getMonth()-11,1));
 const inR=i=>i.date>=RF&&i.date<=RT,FR=F.filter(inR),LR=L.filter(inR),A=[...FR,...LR],S2=(a,k)=>a.reduce((s,i)=>s+(+i[k]||0),0),od=A.filter(i=>i.odo).map(i=>+i.odo),dist=od.length>1?Math.max(...od)-Math.min(...od):0,
 ds=A.map(i=>i.date).sort(),days=ds.length>1?Math.max(1,Math.round((new Date(ds[ds.length-1])-new Date(ds[0]))/864e5)):0,fa=S2(FR,'cost'),sv=S2(LR,'cost'),tot=fa+sv,lt=S2(FR,'litres'),
@@ -893,10 +893,10 @@ ${X.length?Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${new 
 function openX(id){const c=cur();if(!c)return;const x=id?D.items.find(i=>i.id===id)||{}:{date:today(),cat:'toll'};
 sheet(`<h2>${id?'Edit':'Add'} toll, parking or other</h2><div class="seg2" id="xcat" style="margin:6px 0 4px">${XC.map(([k,ic,l])=>`<button class="${x.cat===k?'on':''}" data-k="${k}" onclick="[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this))">${ic} ${l}</button>`).join('')}</div>
 <div class="row mt"><div><label for="xd">Date</label><input id="xd" type="date" value="${E(x.date||today())}"></div><div><label for="xa">Amount (RM)</label><input id="xa" type="number" inputmode="decimal" step="0.01" min="0" value="${x.cost||''}"></div></div>
-<label for="xp">Place</label><input id="xp" value="${E(x.place||'')}" maxlength="120" placeholder="e.g. Plaza Tol Sg Besi, KLCC parking"><label for="xn">Notes</label><input id="xn" value="${E(x.notes||'')}" maxlength="300">
+<label for="xp">Place</label><input id="xp" value="${E(x.place||'')}" maxlength="120" placeholder="e.g. Plaza Tol Sg Besi, KLCC parking"><label for="xn">Notes</label><input id="xn" value="${E(x.notes||'')}" maxlength="300"><div id="xpw">${payH(id?x:null)}</div>
 <div class="row"><button type="button" class="g" onclick="$('#gd').close()">Cancel</button>${id?`<button type="button" class="d" onclick="xDel('${E(id)}')">Delete</button>`:''}<button onclick="xSave(${id?`'${E(id)}'`:''})">Save</button></div>`);setTimeout(()=>{const a=$('#xa');if(a&&!id&&!matchMedia('(pointer:coarse)').matches)a.focus()},50)}
 function xSave(id){const a=+$('#xa').value,d=$('#xd').value;if(!(a>0)||!d)return toast('Enter the date and amount');let x=id&&D.items.find(i=>i.id===id);if(!x){x={id:uid(),kind:'exp',carId:cur().id,by:WHO()};D.items.push(x)}
-Object.assign(x,{date:d,cost:a,cat:($('#xcat .on')||{dataset:{k:'other'}}).dataset.k,place:$('#xp').value.trim(),notes:$('#xn').value.trim(),deleted:0,updated:Date.now()});$('#gd').close();commit();toast('Saved')}
+Object.assign(x,{date:d,cost:a,cat:($('#xcat .on')||{dataset:{k:'other'}}).dataset.k,place:$('#xp').value.trim(),notes:$('#xn').value.trim(),...payOf('xpw'),deleted:0,updated:Date.now()});$('#gd').close();commit();toast('Saved')}
 function xDel(id){const x=D.items.find(i=>i.id===id);if(x){$('#gd').close();x.deleted=1;x.updated=Date.now();save();render();toast('Deleted',()=>{x.deleted=0;x.updated=Date.now();commit()})}}
 // CSV import: finds the date, description and amount columns, keeps rows that look like tolls or parking.
 const TOLLRX=/\btol+\b|toll|plaza|\bplus\b|\bldp\b|sprint|duke|smart\s*tunnel|akleh|\bmex\b|kesas|\bnpe\b|lekas|skve|\bgce\b|besraya|\bsilk\b|\blpt\b|elite|nkve|\bsusur\b|\brfid\b|lebuhraya|highway|expressway|\bwcc\b|\bdash\b|\bsuke\b|\bkidex\b|\bguthrie\b|penang bridge|jambatan/i,
@@ -952,7 +952,8 @@ ${ok?`<div class="btns"><button class="btn pri" onclick="shareGo()">Send invite 
 <p class="m">Your partner opens the link on their phone, enters their name and taps Join. Or they paste the same web app link and secret word in Settings.</p>`
 :`<p class="m" style="color:var(--amb)">Connect Google Sheets sync first (Settings → Connection). Sharing works through your sheet.</p>`}
 ${P.length?`<h3>People</h3>${P.map(n=>`<div class="r m"><span>👤 ${E(n)}${n===WHO()?' (you)':''}</span><span>${(k=>k+(k===1?' entry':' entries'))(D.items.filter(i=>i.by===n&&!i.deleted).length)}</span></div>`).join('')}`:''}
-${!WHO()?'<p class="m">Add your name so your partner can see who logged what.</p>':''}`)}
+${!WHO()?'<p class="m">Add your name so your partner can see who logged what.</p>':''}
+<button class="btn" style="width:100%;margin-top:12px" onclick="walSheet()">👛 ${wal()?'Open shared wallet':'Start a shared car wallet'}</button>`)}
 function shareNeedName(){const n=$('#shme')&&$('#shme').value.trim();if(n&&n!==D.cfg.me){D.cfg.me=n;save()}if(!WHO()){toast('Add your name first');$('#shme')&&$('#shme').focus();return 1}}
 async function shareGo(){if(shareNeedName())return;const u=joinLink();if(navigator.share){try{await navigator.share({title:'Join my Garage',text:WHO()+' invited you to share car records in Garage.',url:u});return}catch(e){if(e.name==='AbortError')return}}shareCopy()}
 async function shareCopy(){if(shareNeedName())return;try{await navigator.clipboard.writeText(joinLink());toast('Invite link copied')}catch(e){sheet(`<h2>Invite link</h2><textarea class="f" style="width:100%;height:120px" readonly onfocus="this.select()">${E(joinLink())}</textarea>`)}}
@@ -964,6 +965,63 @@ sheet(`<h2>Join shared Garage</h2><p class="m">${same?'This phone is already con
 <label class="f"><span>Your name</span><input id="jnme" value="${E(D.cfg.me||'')}" maxlength="30" placeholder="e.g. Aina"></label>
 <div class="btns"><button class="btn pri" id="jngo">Join</button><button class="btn" onclick="$('#gd').close()">Cancel</button></div>`);
 $('#jngo').onclick=async()=>{const n=$('#jnme').value.trim();if(!n)return toast('Enter your name');D.cfg.me=n;D.cfg.url=j.u;D.cfg.token=j.t;save();$('#gd').close();toast('Joining…');await sync(1);render();toast('Joined. You now share records.')};return 1}
+
+// ---- Shared car wallet. Settings live in item 'wallet' so both phones see them.
+// Top-ups (wal/in), wallet spending (wal/out + entries with pay 'w'), settle-ups (wal/set, by -> to).
+const wal=()=>{const w=D.items.find(i=>i.id==='wallet'&&!i.deleted);return w||null},WCOL=['var(--ac)','var(--amb)','#8b5cf6','#64748b'];
+function payH(it){if(!wal())return '';const v=it?(it.pay||''):'w';return `<label>Paid from</label><div class="seg2 payseg" style="margin:4px 0 12px">${[['w','👛 Wallet'],['p','👤 '+(it&&it.by&&it.by!==WHO()?E(it.by):'Me')]].map(([k,l])=>`<button type="button" data-k="${k}" class="${v===k||(k==='p'&&v!=='w')?'on':''}" onclick="[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this))">${l}</button>`).join('')}</div>`}
+function payUI(id,it){const e=$('#'+id);if(e)e.innerHTML=it===null?'':payH(it&&it.id?it:null)}
+function payOf(id){const b=document.querySelector('#'+id+' .payseg .on');return b?{pay:b.dataset.k}:{}}
+function walCalc(){return cached('wal','',()=>{const w=wal();if(!w)return null;const W=live('wal'),P={},add=(n,k,v)=>{n=n||'Earlier';const x=P[n]=P[n]||{in:0,own:0,set:0};x[k]+=v};
+let tin=0,tout=0;const hist=[];
+W.forEach(i=>{const v=+i.cost||0;if(i.typ==='in'){tin+=v;add(i.by,'in',v);hist.push(i)}else if(i.typ==='out'){tout+=v;hist.push(i)}else if(i.typ==='set'){add(i.by,'set',v);add(i.to,'set',-v);hist.push(i)}});
+D.items.forEach(i=>{if(i.deleted||!/^(log|fuel|exp)$/.test(i.kind)||!(+i.cost))return;if(i.pay==='w'){tout+=+i.cost;hist.push(i)}else if(i.pay==='p'&&(i.date||'')>=(w.date||'')){add(i.by,'own',+i.cost);hist.push(i)}});
+const names=[...new Set([...people(),...Object.keys(P).filter(n=>n!=='Earlier')])].filter(n=>n&&n!=='Earlier');names.forEach(n=>P[n]=P[n]||{in:0,own:0,set:0});
+const put=n=>P[n].in+P[n].own+P[n].set,tot=names.reduce((a,n)=>a+put(n),0),fair=names.length?tot/names.length:0;
+let owe=null;if(names.length===2){const[a,b]=names,d=put(a)-fair;if(Math.abs(d)>=0.5)owe=d>0?{from:b,to:a,v:d}:{from:a,to:b,v:-d}}
+hist.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.updated||0)-(a.updated||0));
+return{w,bal:tin-tout,tin,tout,P,names,put,tot,owe,hist}})}
+function walCard(){const c=walCalc();if(!c)return '';const m0=today().slice(0,7),sp=c.hist.filter(i=>(i.date||'').startsWith(m0)&&(i.pay==='w'||i.typ==='out')).reduce((a,i)=>a+(+i.cost||0),0);
+return `<div class="c fz cl" onclick="walSheet()"><div class="r"><span class="m">👛 ${E(c.w.name||'Car wallet')}</span><button class="lnk" onclick="event.stopPropagation();walTop()">+ Top up</button></div>
+<div class="kv" style="font-size:24px;font-weight:700;margin:4px 0;${c.bal<0?'color:var(--red,#f87171)':''}">${rm(c.bal)}</div>
+<div class="m">${c.bal<0?'Wallet is short · top up soon':'Left in the wallet'}${sp?' · spent '+rm(sp)+' this month':''}</div>
+${c.tot&&c.names.length>1?`<div class="whob">${c.names.map((n,j)=>`<i style="flex:${Math.max(c.put(n),0)||0.001};background:${WCOL[j%4]}"></i>`).join('')}</div><div class="m">${c.names.map(n=>E(n)+' put in '+rm(c.put(n))).join(' · ')}</div>`:''}
+${c.owe?`<div class="m" style="margin-top:6px;color:var(--amb)">To even out: ${E(c.owe.from)} → ${E(c.owe.to)} ${rm(c.owe.v)}</div>`:''}</div>`}
+function walSheet(){const w=wal();if(!w)return walStart();const c=walCalc();
+sheet(`<h2>👛 ${E(w.name||'Car wallet')}</h2><div class="kv" style="font-size:30px;font-weight:700;${c.bal<0?'color:var(--red,#f87171)':''}">${rm(c.bal)}</div><p class="m">Topped up ${rm(c.tin)} · spent ${rm(c.tout)} since ${fd(w.date)}</p>
+<div class="btns"><button class="btn pri" onclick="walTop()">+ Top up</button><button class="btn" onclick="walOut()">− Pay from wallet</button>${c.owe?`<button class="btn" onclick="walSettle()">Settle up</button>`:''}</div>
+${c.names.length?`<h3>Who put in</h3>${c.names.map((n,j)=>{const x=c.P[n];return `<div class="r m" style="margin-top:4px"><span><i class="fdot" style="background:${WCOL[j%4]};display:inline-block;margin-right:6px"></i>${E(n)}${n===WHO()?' (you)':''}</span><span>${rm(c.put(n))}</span></div><div class="m" style="font-size:12px;margin-left:16px">Top-ups ${rm(x.in)}${x.own?' · paid own pocket '+rm(x.own):''}${x.set?' · settle-ups '+rm(x.set):''}</div>`}).join('')}
+${c.owe?`<p class="m" style="color:var(--amb)">To share costs evenly, ${E(c.owe.from)} pays ${E(c.owe.to)} ${rm(c.owe.v)}.</p>`:c.names.length>1?'<p class="m">You are even. 👍</p>':''}`:''}
+<h3>History</h3>${c.hist.length?`<div class="flist">${c.hist.slice(0,60).map(walRow).join('')}</div>`:'<p class="m">Nothing yet. Top up to start.</p>'}
+<p class="m" style="margin-top:12px">Fuel, services and tolls ask "Paid from" when you log them. Pick Wallet to take it from here, or Me if you paid from your own pocket.</p>
+<button class="btn sm" onclick="walStart(1)">Wallet settings</button>`)}
+function walRow(i){const w=i.kind==='wal',ic=w?{in:'⬆️',out:'⬇️',set:'🤝'}[i.typ]:i.kind==='fuel'?'⛽':i.kind==='log'?'🔧':xc(i.cat)[1],
+t=w?(i.typ==='in'?'Top up':i.typ==='set'?'Settle up → '+E(i.to||''):E(i.notes||'Paid from wallet')):E(i.kind==='fuel'?(i.brand||'Fill-up'):i.kind==='log'?(i.item||'Service'):(i.place||xc(i.cat)[2])),
+plus=w&&i.typ==='in',own=!w&&i.pay==='p',sub=[sd(i.date),i.by?E(i.by):'',own?'own pocket':'',w&&i.typ!=='set'&&i.notes&&i.typ==='in'?E(i.notes):''].filter(Boolean).join(' · ');
+return `<div class="frow" ${w?`onclick="walEdit('${E(i.id)}')"`:''}><span class="dico">${ic}</span><div class="fmid"><b>${t}</b><div class="m">${sub}</div></div><div class="fend"><b style="${plus?'color:var(--ac)':own||i.typ==='set'?'opacity:.6':''}">${plus?'+':own||i.typ==='set'?'':'−'}${rm(i.cost)}</b></div></div>`}
+function walStart(edit){const w=wal()||{};sheet(`<h2>${edit?'Wallet settings':'Start a shared car wallet'}</h2>
+<p class="m">One pot of money for the car. You both top it up, fuel, services and tolls come out of it, and Garage shows the balance and who put in how much. It syncs through your Google Sheet, so your partner sees the same wallet.</p>
+<label for="wn">Name</label><input id="wn" maxlength="60" value="${E(w.name||'Car wallet')}">
+<div class="row"><div><label for="wd">Start date</label><input id="wd" type="date" value="${E(w.date||today())}"></div><div><label for="wb">${edit?'Balance today (optional)':'Money in it now (RM)'}</label><input id="wb" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>
+<p class="m">Entries you paid yourself only count from the start date.</p>
+<div class="row"><button type="button" class="g" onclick="$('#gd').close()">Cancel</button>${edit?`<button type="button" class="d" onclick="walOff()">Turn off</button>`:''}<button onclick="walGo()">${edit?'Save':'Start wallet'}</button></div>`)}
+function walGo(){const n=$('#wn').value.trim()||'Car wallet',d=$('#wd').value||today(),b=+$('#wb').value||0,now=Date.now();let w=D.items.find(i=>i.id==='wallet');if(!w){w={id:'wallet',kind:'wal',typ:'cfg',by:WHO()};D.items.push(w)}
+Object.assign(w,{name:n,date:d,deleted:0,updated:now});if(b>0){const c=walCalc(),cur0=c?c.bal:0,diff=b-cur0;if(Math.abs(diff)>=0.01)D.items.push({id:uid(),kind:'wal',typ:diff>0?'in':'out',cost:Math.abs(+diff.toFixed(2)),date:today(),by:WHO(),notes:'Starting balance',updated:now})}
+VER++;commit();walSheet();toast('Wallet saved')}
+function walOff(){if(!confirm('Turn off the shared wallet? Top-ups stay saved and come back if you start it again.'))return;const w=wal();if(w){w.deleted=1;w.updated=Date.now()}$('#gd').close();commit()}
+function walForm(typ,i){i=i||{};const P=wal()&&walCalc().names||[],me=i.by||WHO(),names=[...new Set([me,...P].filter(Boolean))];
+sheet(`<h2>${typ==='in'?'Top up wallet':typ==='out'?'Pay from wallet':'Settle up'}</h2>
+${typ!=='out'&&names.length?`<label>${typ==='set'?'Who pays':'Who'}</label><div class="seg2" id="wwho" style="margin:4px 0 8px">${names.map(n=>`<button type="button" data-n="${E(n)}" class="${n===me?'on':''}" onclick="[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this))">${E(n)}</button>`).join('')}</div>`:''}
+<div class="row"><div><label for="wa">Amount (RM)</label><input id="wa" type="number" inputmode="decimal" step="0.01" min="0" value="${i.cost||''}"></div><div><label for="wdt">Date</label><input id="wdt" type="date" value="${E(i.date||today())}"></div></div>
+<label for="wno">${typ==='out'?'What for':'Note'}</label><input id="wno" maxlength="200" value="${E(i.notes||'')}" placeholder="${typ==='out'?'e.g. Car wash, insurance':'e.g. Monthly share'}">
+<div class="row"><button type="button" class="g" onclick="walSheet()">Back</button>${i.id?`<button type="button" class="d" onclick="walDel('${E(i.id)}')">Delete</button>`:''}<button onclick="walSave('${typ}','${E(i.id||'')}')">Save</button></div>`);setTimeout(()=>{const a=$('#wa');if(a&&!i.id&&!matchMedia('(pointer:coarse)').matches)a.focus()},50)}
+const walTop=()=>{if(!wal())return walStart();walForm('in')},walOut=()=>walForm('out');
+function walSettle(){const c=walCalc();if(!c||!c.owe)return;walForm('set',{by:c.owe.from,cost:+c.owe.v.toFixed(2),notes:'Settle up'})}
+function walEdit(id){const i=D.items.find(x=>x.id===id);if(i)walForm(i.typ,i)}
+function walSave(typ,id){const a=+$('#wa').value,d=$('#wdt').value;if(!(a>0)||!d)return toast('Enter the amount and date');const b=$('#wwho .on'),by=b?b.dataset.n:WHO();
+let i=id&&D.items.find(x=>x.id===id);if(!i){i={id:uid(),kind:'wal',typ};D.items.push(i)}let to='';if(typ==='set'){const c=walCalc();to=(c.names.find(n=>n!==by))||''}
+Object.assign(i,{cost:a,date:d,by:typ==='out'?(i.by||WHO()):by,notes:$('#wno').value.trim(),...(typ==='set'?{to}:{}),deleted:0,updated:Date.now()});VER++;commit();walSheet();toast(typ==='in'?'Topped up':'Saved')}
+function walDel(id){const i=D.items.find(x=>x.id===id);if(i){i.deleted=1;i.updated=Date.now();VER++;commit();walSheet();toast('Deleted',()=>{i.deleted=0;i.updated=Date.now();VER++;commit()})}}
 
 let SCN=null;
 function scanR(k){if(!D.cfg.url)return toast('Receipt scanning needs Google Sheets sync (Settings)');const i=document.createElement('input');i.type='file';i.accept='image/*,application/pdf';i.onchange=()=>scanGo(k,i.files[0]);i.click()}
@@ -1007,7 +1065,7 @@ $('#gd').close();if(n){commit();go('todo');toast('Added '+n+' reminder'+(n>1?'s'
 function bdg(){if(!('Notification' in window))return toast('Open Garage from your Home Screen first');Notification.requestPermission().then(p=>{toast(p==='granted'?'Icon badge turned on':'Permission was not given');render()})}
 function badge(){if(!navigator.setAppBadge)return;const n=cars().reduce((s,c)=>s+remOf(c).filter(i=>st(i)>0).length,0);(n?navigator.setAppBadge(n):navigator.clearAppBadge()).catch(()=>{})}
 function memo(f){let k,v;return function(){const kk=VER+'|'+(D.cfg.sel||'')+'|'+today();if(kk!==k){v=f();k=kk}return v}}
-const APP_V='2026.11.24a',CODE_V=8;let DRE='',MISS=[];
+const APP_V='2026.11.24b',CODE_V=8;let DRE='',MISS=[];
 const logE=(a,m)=>{const x={t:Date.now(),a:String(a),m:String((m&&m.message)||m||'').replace(/token[^,;]*/gi,'token …').slice(0,300)};LOG.unshift(x);if(LOG.length>100)LOG.length=100;kv('put','log',LOG).catch(()=>{})};
 addEventListener('error',e=>logE('app',(e.message||'Error')+(e.lineno?' (line '+e.lineno+')':'')));addEventListener('unhandledrejection',e=>logE('app',e.reason));
 const okUrl=u=>/^https:\/\/script\.google\.com\/(a\/macros\/[\w.-]+|macros)\/s\/[\w-]{20,}\/(exec|dev)$/.test(u||'');
@@ -1018,8 +1076,8 @@ catch(e){throw new Error(e.name==='AbortError'?'no reply from Google after '+Mat
 const tx=await r.text();let j;try{j=JSON.parse(tx)}catch(e){throw new Error(/<html/i.test(tx)?'Google sent a web page instead of data. Check the web app link and that access is set to Anyone':'unreadable reply from Google')}
 if(j&&j.error)throw new Error(j.error);return j}
 const NUMF=['amt','n','rate','inst','lead','budget','odo','cost','ppl','litres','tank','rpm','rpk','other','updated','full','ph','deleted'],DATEF=['date','rtax','ins','odoAt','sz'],IDF=['id','carId','rid'],
-STRF={by:30,shop:80,cat:10,phone:20,model:80,phsrc:200,phq:80,finLoan:80,finIns:80,lm:4,dtype:12,ref:60,kind:8,item:300,name:120,plate:20,year:8,colour:40,engine:40,notes:1000,brand:40,state:40,area:80,ftype:30,place:120,mode:4,pt:4,icon:8};
-function clean(i){if(!i||typeof i!=='object'||Array.isArray(i))return null;if(typeof i.id!=='string'||!/^[\w.:-]{1,80}$/.test(i.id))return null;if(!['car','log','fuel','todo','svc','logo','doc','loan','shop','exp'].includes(i.kind))return null;const o={};
+STRF={by:30,pay:2,typ:6,to:30,shop:80,cat:10,phone:20,model:80,phsrc:200,phq:80,finLoan:80,finIns:80,lm:4,dtype:12,ref:60,kind:8,item:300,name:120,plate:20,year:8,colour:40,engine:40,notes:1000,brand:40,state:40,area:80,ftype:30,place:120,mode:4,pt:4,icon:8};
+function clean(i){if(!i||typeof i!=='object'||Array.isArray(i))return null;if(typeof i.id!=='string'||!/^[\w.:-]{1,80}$/.test(i.id))return null;if(!['car','log','fuel','todo','svc','logo','doc','loan','shop','exp','wal'].includes(i.kind))return null;const o={};
 for(const k of Object.keys(i)){const v=i[k];
 if(NUMF.includes(k)){if(v==='')o[k]='';else if(v!=null&&v!==''){const n=+v;if(isFinite(n))o[k]=n}}
 else if(DATEF.includes(k))o[k]=typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)?v:'';
