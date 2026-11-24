@@ -893,8 +893,8 @@ ${X.length?Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${new 
 function openX(id){const c=cur();if(!c)return;const x=id?D.items.find(i=>i.id===id)||{}:{date:today(),cat:'toll'};
 sheet(`<h2>${id?'Edit':'Add'} toll, parking or other</h2><div class="seg2" id="xcat" style="margin:6px 0 4px">${XC.map(([k,ic,l])=>`<button class="${x.cat===k?'on':''}" data-k="${k}" onclick="[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this))">${ic} ${l}</button>`).join('')}</div>
 <div class="row mt"><div><label for="xd">Date</label><input id="xd" type="date" value="${E(x.date||today())}"></div><div><label for="xa">Amount (RM)</label><input id="xa" type="number" inputmode="decimal" step="0.01" min="0" value="${x.cost||''}"></div></div>
-<label for="xp">Place</label><input id="xp" value="${E(x.place||'')}" maxlength="120" placeholder="e.g. Plaza Tol Sg Besi, KLCC parking"><label for="xn">Notes</label><input id="xn" value="${E(x.notes||'')}" maxlength="300"><div id="xpw">${payH(id?x:null)}</div>
-<div class="row"><button type="button" class="g" onclick="$('#gd').close()">Cancel</button>${id?`<button type="button" class="d" onclick="xDel('${E(id)}')">Delete</button>`:''}<button onclick="xSave(${id?`'${E(id)}'`:''})">Save</button></div>`);setTimeout(()=>{const a=$('#xa');if(a&&!id&&!matchMedia('(pointer:coarse)').matches)a.focus()},50)}
+<label for="xp">Place</label><input id="xp" value="${E(x.place||'')}" maxlength="120" placeholder="e.g. Plaza Tol Sg Besi, KLCC parking"><label for="xn">Notes</label><input id="xn" value="${E(x.notes||'')}" maxlength="300"><div id="xpw">${payH(id?x:null,'exp')}</div>
+<div class="row"><button type="button" class="g" onclick="$('#gd').close()">Cancel</button>${id?`<button type="button" class="d" onclick="xDel('${E(id)}')">Delete</button>`:''}<button onclick="xSave(${id?`'${E(id)}'`:''})">Save</button></div>`);setTimeout(()=>{payAutoLbl($('#xpw'));const a=$('#xa');if(a&&!id&&!matchMedia('(pointer:coarse)').matches)a.focus()},50)}
 function xSave(id){const a=+$('#xa').value,d=$('#xd').value;if(!(a>0)||!d)return toast('Enter the date and amount');let x=id&&D.items.find(i=>i.id===id);if(!x){x={id:uid(),kind:'exp',carId:cur().id,by:WHO()};D.items.push(x)}
 Object.assign(x,{date:d,cost:a,cat:($('#xcat .on')||{dataset:{k:'other'}}).dataset.k,place:$('#xp').value.trim(),notes:$('#xn').value.trim(),...payOf('xpw'),deleted:0,updated:Date.now()});$('#gd').close();commit();toast('Saved')}
 function xDel(id){const x=D.items.find(i=>i.id===id);if(x){$('#gd').close();x.deleted=1;x.updated=Date.now();save();render();toast('Deleted',()=>{x.deleted=0;x.updated=Date.now();commit()})}}
@@ -969,9 +969,40 @@ $('#jngo').onclick=async()=>{const n=$('#jnme').value.trim();if(!n)return toast(
 // ---- Shared car wallet. Settings live in item 'wallet' so both phones see them.
 // Top-ups (wal/in), wallet spending (wal/out + entries with pay 'w'), settle-ups (wal/set, by -> to).
 const wal=()=>{const w=D.items.find(i=>i.id==='wallet'&&!i.deleted);return w||null},WCOL=['var(--ac)','var(--amb)','#8b5cf6','#64748b'];
-function payH(it){if(!wal())return '';const v=it?(it.pay||''):'w';return `<label>Paid from</label><div class="seg2 payseg" style="margin:4px 0 12px">${[['w','👛 Wallet'],['p','👤 '+(it&&it.by&&it.by!==WHO()?E(it.by):'Me')]].map(([k,l])=>`<button type="button" data-k="${k}" class="${v===k||(k==='p'&&v!=='w')?'on':''}" onclick="[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this))">${l}</button>`).join('')}</div>`}
-function payUI(id,it){const e=$('#'+id);if(e)e.innerHTML=it===null?'':payH(it&&it.id?it:null)}
-function payOf(id){const b=document.querySelector('#'+id+' .payseg .on');return b?{pay:b.dataset.k}:{}}
+function payH(it,ctx){const w=wal(),A=payAccts();if(!w&&!A.length)return '';const v=it?(it.pay||''):'w';
+const seg=w?`<div class="seg2 payseg" style="margin:4px 0 8px">${[['w','👛 Wallet'],['p','👤 '+(it&&it.by&&it.by!==WHO()?E(it.by):'Me')]].map(([k,l])=>`<button type="button" data-k="${k}" class="${v===k||(k==='p'&&v!=='w')?'on':''}" onclick="[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this));payAutoLbl(this)">${l}</button>`).join('')}</div>`:'';
+const pre=it&&it.acct&&!it.acctA?it.acct:'';
+const sel=A.length?`<select class="paya" data-ctx="${ctx||''}" onchange="payAutoLbl(this)" aria-label="Account used"><option value="">Auto</option>${A.map(a=>`<option value="${E(a.name)}"${a.name===pre?' selected':''}>${E(a.name)}${a.balance!==null&&!payCard(a)?' · '+rm(a.balance):''}</option>`).join('')}</select><div class="m payw" style="margin:-4px 0 12px"></div>`:'';
+return `<label>Paid from</label>${seg}${sel}`}
+function payUI(id,it){const e=$('#'+id);if(!e)return;e.innerHTML=it===null?'':payH(it&&it.id?it:null,{upw:'fuel',fpw:'log',xpw:'exp'}[id]);if(it!==null){finLoad();payAutoLbl(e)}}
+function payOf(id){const b=document.querySelector('#'+id+' .payseg .on'),s=document.querySelector('#'+id+' .paya'),o=b?{pay:b.dataset.k}:{};
+if(s){if(s.value){o.acct=s.value;o.acctA=''}else{const g=payGuess(id);o.acct=g?g.a.name:'';o.acctA=g?'1':''}}return o}
+// ---- Which account pays? Accounts come from the Finance Tracker (read-only).
+const payCard=a=>/card|credit/.test(a.type||'')||/credit card|visa|master/i.test(a.name||''),
+payAccts=()=>((FIN&&FIN.accounts)||[]).filter(a=>a.name&&!/loan|borrow|bnpl|invest|asset|property|fixed|epf|kwsp|asb|unit trust|stock|crypto/i.test((a.type||'')+' '+a.name)).slice(0,40);
+function payCtx(id){const n=v=>+v||0;if(id==='upw')return{k:'fuel',key:FB||'',cost:n($('#uc')&&$('#uc').value)};
+if(id==='fpw')return{k:'log',key:($('#fsh')&&$('#fsh').value.trim())||'',cost:Object.values(typeof PR==='object'&&PR||{}).reduce((a,v)=>a+n(v),0)+n($('#fe')&&$('#fe').value)};
+const c=$('#xcat .on');return{k:'exp',key:c?c.dataset.k:'other',cost:n($('#xa')&&$('#xa').value)}}
+function payGuess(id){const A=payAccts();if(!A.length)return null;const x=payCtx(id),b=document.querySelector('#'+id+' .payseg .on'),pay=b?b.dataset.k:'',w=wal(),
+by=nm=>A.find(a=>a.name===nm),ok=a=>a&&(payCard(a)||a.balance===null||a.balance>=x.cost),rx=r=>A.filter(a=>r.test(a.name)),C=[];
+const add=(a,why)=>{if(a&&!C.some(c=>c.a===a))C.push({a,why})};
+if(pay==='w'&&w&&w.acct)add(by(w.acct),'holds the car wallet');
+const same=D.items.filter(i=>!i.deleted&&i.kind===x.k&&i.acct&&!i.acctA&&(x.k==='fuel'?i.brand===x.key:x.k==='exp'?i.cat===x.key:i.shop===x.key)&&x.key).sort((a,b)=>(b.updated||0)-(a.updated||0));
+if(same[0])add(by(same[0].acct),'you used it last time at '+(x.k==='exp'?xc(x.key)[2].toLowerCase():x.key));
+const FB2={Petronas:/setel|petronas|mesra/i,Shell:/shell/i,Petron:/petron/i,Caltex:/caltex/i,BHP:/bhp/i};
+if(x.k==='fuel'&&FB2[x.key])rx(FB2[x.key]).forEach(a=>add(a,'matches '+x.key));
+if(x.k==='exp'&&/toll|park/.test(x.key))rx(/touch|tng|t n g|rfid|tol/i).forEach(a=>add(a,'Touch ’n Go works for '+(x.key==='toll'?'tolls':'parking')));
+if(x.k==='fuel')rx(/setel|touch|tng|boost|grab|shopee|ewallet|e-wallet/i).forEach(a=>add(a,'e-wallet for fuel'));
+if(x.k==='log')A.filter(payCard).forEach(a=>add(a,'card for bigger bills'));
+const use={};D.items.forEach(i=>{if(!i.deleted&&i.acct&&/^(log|fuel|exp)$/.test(i.kind))use[i.acct]=(use[i.acct]||0)+1});
+Object.keys(use).sort((a,b)=>use[b]-use[a]).forEach(n=>add(by(n),'your most used account for the car'));
+[...A].filter(a=>!payCard(a)).sort((a,b)=>(b.balance||0)-(a.balance||0)).forEach(a=>add(a,'has the most money'));A.forEach(a=>add(a,''));
+const g=C.find(c=>ok(c.a));if(!g)return C[0]?{...C[0],low:1}:null;const sk=C.indexOf(g)>0&&!ok(C[0].a)?C[0].a.name:'';return{...g,skip:sk}}
+function payAutoLbl(el){const box=el&&el.closest?el.closest('#upw,#fpw,#xpw'):null;if(!box)return;const s=box.querySelector('.paya'),l=box.querySelector('.payw');if(!s||!l)return;
+if(s.value){const a=payAccts().find(a=>a.name===s.value),x=payCtx(box.id);l.innerHTML=a&&a.balance!==null&&!payCard(a)&&a.balance<x.cost?'<span style="color:var(--amb)">Not enough in this account for '+rm(x.cost)+'</span>':'';return}
+const g=payGuess(box.id);s.options[0].textContent=g?'Auto · '+g.a.name:'Auto';l.innerHTML=g?(g.low?'<span style="color:var(--amb)">No account has enough for this. Top one up in Finance.</span>':'Picked '+E(g.a.name)+(g.why?' · '+E(g.why):'')+(g.skip?' · skipped '+E(g.skip)+' (low balance)':'')):''}
+document.addEventListener('input',e=>{const t=e.target;if(t&&t.closest&&t.closest('#fu,#dlg,#gd'))document.querySelectorAll('#upw,#fpw,#xpw').forEach(b=>{if(b.offsetParent)payAutoLbl(b)})});
+document.addEventListener('click',e=>{const t=e.target;if(t&&t.closest&&t.closest('#fbd,#xcat,#fcs,.chips'))setTimeout(()=>document.querySelectorAll('#upw,#fpw,#xpw').forEach(b=>{if(b.offsetParent)payAutoLbl(b)}),0)});
 function walCalc(){return cached('wal','',()=>{const w=wal();if(!w)return null;const W=live('wal'),P={},add=(n,k,v)=>{n=n||'Earlier';const x=P[n]=P[n]||{in:0,own:0,set:0};x[k]+=v};
 let tin=0,tout=0;const hist=[];
 W.forEach(i=>{const v=+i.cost||0;if(i.typ==='in'){tin+=v;add(i.by,'in',v);hist.push(i)}else if(i.typ==='out'){tout+=v;hist.push(i)}else if(i.typ==='set'){add(i.by,'set',v);add(i.to,'set',-v);hist.push(i)}});
@@ -992,21 +1023,24 @@ sheet(`<h2>👛 ${E(w.name||'Car wallet')}</h2><div class="kv" style="font-size:
 <div class="btns"><button class="btn pri" onclick="walTop()">+ Top up</button><button class="btn" onclick="walOut()">− Pay from wallet</button>${c.owe?`<button class="btn" onclick="walSettle()">Settle up</button>`:''}</div>
 ${c.names.length?`<h3>Who put in</h3>${c.names.map((n,j)=>{const x=c.P[n];return `<div class="r m" style="margin-top:4px"><span><i class="fdot" style="background:${WCOL[j%4]};display:inline-block;margin-right:6px"></i>${E(n)}${n===WHO()?' (you)':''}</span><span>${rm(c.put(n))}</span></div><div class="m" style="font-size:12px;margin-left:16px">Top-ups ${rm(x.in)}${x.own?' · paid own pocket '+rm(x.own):''}${x.set?' · settle-ups '+rm(x.set):''}</div>`}).join('')}
 ${c.owe?`<p class="m" style="color:var(--amb)">To share costs evenly, ${E(c.owe.from)} pays ${E(c.owe.to)} ${rm(c.owe.v)}.</p>`:c.names.length>1?'<p class="m">You are even. 👍</p>':''}`:''}
-<h3>History</h3>${c.hist.length?`<div class="flist">${c.hist.slice(0,60).map(walRow).join('')}</div>`:'<p class="m">Nothing yet. Top up to start.</p>'}
+${walAcc()}<h3>History</h3>${c.hist.length?`<div class="flist">${c.hist.slice(0,60).map(walRow).join('')}</div>`:'<p class="m">Nothing yet. Top up to start.</p>'}
 <p class="m" style="margin-top:12px">Fuel, services and tolls ask "Paid from" when you log them. Pick Wallet to take it from here, or Me if you paid from your own pocket.</p>
 <button class="btn sm" onclick="walStart(1)">Wallet settings</button>`)}
+function walAcc(){const m0=today().slice(0,7),t={};D.items.forEach(i=>{if(!i.deleted&&i.acct&&/^(log|fuel|exp)$/.test(i.kind)&&(i.date||'').startsWith(m0))t[i.acct]=(t[i.acct]||0)+(+i.cost||0)});const K=Object.keys(t).sort((a,b)=>t[b]-t[a]);
+return K.length?`<h3>Accounts used this month</h3>${K.map(k=>{const a=payAccts().find(x=>x.name===k);return `<div class="r m" style="margin-top:4px"><span>💳 ${E(k)}</span><span>${rm(t[k])}${a&&a.balance!==null&&!payCard(a)?' · '+rm(a.balance)+' left':''}</span></div>`}).join('')}`:''}
 function walRow(i){const w=i.kind==='wal',ic=w?{in:'⬆️',out:'⬇️',set:'🤝'}[i.typ]:i.kind==='fuel'?'⛽':i.kind==='log'?'🔧':xc(i.cat)[1],
 t=w?(i.typ==='in'?'Top up':i.typ==='set'?'Settle up → '+E(i.to||''):E(i.notes||'Paid from wallet')):E(i.kind==='fuel'?(i.brand||'Fill-up'):i.kind==='log'?(i.item||'Service'):(i.place||xc(i.cat)[2])),
-plus=w&&i.typ==='in',own=!w&&i.pay==='p',sub=[sd(i.date),i.by?E(i.by):'',own?'own pocket':'',w&&i.typ!=='set'&&i.notes&&i.typ==='in'?E(i.notes):''].filter(Boolean).join(' · ');
+plus=w&&i.typ==='in',own=!w&&i.pay==='p',sub=[sd(i.date),i.by?E(i.by):'',own?'own pocket':'',i.acct?'💳 '+E(i.acct):'',w&&i.typ!=='set'&&i.notes&&i.typ==='in'?E(i.notes):''].filter(Boolean).join(' · ');
 return `<div class="frow" ${w?`onclick="walEdit('${E(i.id)}')"`:''}><span class="dico">${ic}</span><div class="fmid"><b>${t}</b><div class="m">${sub}</div></div><div class="fend"><b style="${plus?'color:var(--ac)':own||i.typ==='set'?'opacity:.6':''}">${plus?'+':own||i.typ==='set'?'':'−'}${rm(i.cost)}</b></div></div>`}
 function walStart(edit){const w=wal()||{};sheet(`<h2>${edit?'Wallet settings':'Start a shared car wallet'}</h2>
 <p class="m">One pot of money for the car. You both top it up, fuel, services and tolls come out of it, and Garage shows the balance and who put in how much. It syncs through your Google Sheet, so your partner sees the same wallet.</p>
 <label for="wn">Name</label><input id="wn" maxlength="60" value="${E(w.name||'Car wallet')}">
 <div class="row"><div><label for="wd">Start date</label><input id="wd" type="date" value="${E(w.date||today())}"></div><div><label for="wb">${edit?'Balance today (optional)':'Money in it now (RM)'}</label><input id="wb" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>
+${payAccts().length?`<label for="wacc">Money kept in</label><select id="wacc"><option value="">Not linked</option>${payAccts().map(a=>`<option${a.name===w.acct?' selected':''}>${E(a.name)}</option>`).join('')}</select><p class="m" style="margin-top:-4px">Payments from the wallet use this account.</p>`:''}
 <p class="m">Entries you paid yourself only count from the start date.</p>
 <div class="row"><button type="button" class="g" onclick="$('#gd').close()">Cancel</button>${edit?`<button type="button" class="d" onclick="walOff()">Turn off</button>`:''}<button onclick="walGo()">${edit?'Save':'Start wallet'}</button></div>`)}
 function walGo(){const n=$('#wn').value.trim()||'Car wallet',d=$('#wd').value||today(),b=+$('#wb').value||0,now=Date.now();let w=D.items.find(i=>i.id==='wallet');if(!w){w={id:'wallet',kind:'wal',typ:'cfg',by:WHO()};D.items.push(w)}
-Object.assign(w,{name:n,date:d,deleted:0,updated:now});if(b>0){const c=walCalc(),cur0=c?c.bal:0,diff=b-cur0;if(Math.abs(diff)>=0.01)D.items.push({id:uid(),kind:'wal',typ:diff>0?'in':'out',cost:Math.abs(+diff.toFixed(2)),date:today(),by:WHO(),notes:'Starting balance',updated:now})}
+Object.assign(w,{name:n,date:d,acct:$('#wacc')?$('#wacc').value:(w.acct||''),deleted:0,updated:now});if(b>0){const c=walCalc(),cur0=c?c.bal:0,diff=b-cur0;if(Math.abs(diff)>=0.01)D.items.push({id:uid(),kind:'wal',typ:diff>0?'in':'out',cost:Math.abs(+diff.toFixed(2)),date:today(),by:WHO(),notes:'Starting balance',updated:now})}
 VER++;commit();walSheet();toast('Wallet saved')}
 function walOff(){if(!confirm('Turn off the shared wallet? Top-ups stay saved and come back if you start it again.'))return;const w=wal();if(w){w.deleted=1;w.updated=Date.now()}$('#gd').close();commit()}
 function walForm(typ,i){i=i||{};const P=wal()&&walCalc().names||[],me=i.by||WHO(),names=[...new Set([me,...P].filter(Boolean))];
@@ -1065,7 +1099,7 @@ $('#gd').close();if(n){commit();go('todo');toast('Added '+n+' reminder'+(n>1?'s'
 function bdg(){if(!('Notification' in window))return toast('Open Garage from your Home Screen first');Notification.requestPermission().then(p=>{toast(p==='granted'?'Icon badge turned on':'Permission was not given');render()})}
 function badge(){if(!navigator.setAppBadge)return;const n=cars().reduce((s,c)=>s+remOf(c).filter(i=>st(i)>0).length,0);(n?navigator.setAppBadge(n):navigator.clearAppBadge()).catch(()=>{})}
 function memo(f){let k,v;return function(){const kk=VER+'|'+(D.cfg.sel||'')+'|'+today();if(kk!==k){v=f();k=kk}return v}}
-const APP_V='2026.11.24b',CODE_V=8;let DRE='',MISS=[];
+const APP_V='2026.11.24c',CODE_V=8;let DRE='',MISS=[];
 const logE=(a,m)=>{const x={t:Date.now(),a:String(a),m:String((m&&m.message)||m||'').replace(/token[^,;]*/gi,'token …').slice(0,300)};LOG.unshift(x);if(LOG.length>100)LOG.length=100;kv('put','log',LOG).catch(()=>{})};
 addEventListener('error',e=>logE('app',(e.message||'Error')+(e.lineno?' (line '+e.lineno+')':'')));addEventListener('unhandledrejection',e=>logE('app',e.reason));
 const okUrl=u=>/^https:\/\/script\.google\.com\/(a\/macros\/[\w.-]+|macros)\/s\/[\w-]{20,}\/(exec|dev)$/.test(u||'');
@@ -1076,7 +1110,7 @@ catch(e){throw new Error(e.name==='AbortError'?'no reply from Google after '+Mat
 const tx=await r.text();let j;try{j=JSON.parse(tx)}catch(e){throw new Error(/<html/i.test(tx)?'Google sent a web page instead of data. Check the web app link and that access is set to Anyone':'unreadable reply from Google')}
 if(j&&j.error)throw new Error(j.error);return j}
 const NUMF=['amt','n','rate','inst','lead','budget','odo','cost','ppl','litres','tank','rpm','rpk','other','updated','full','ph','deleted'],DATEF=['date','rtax','ins','odoAt','sz'],IDF=['id','carId','rid'],
-STRF={by:30,pay:2,typ:6,to:30,shop:80,cat:10,phone:20,model:80,phsrc:200,phq:80,finLoan:80,finIns:80,lm:4,dtype:12,ref:60,kind:8,item:300,name:120,plate:20,year:8,colour:40,engine:40,notes:1000,brand:40,state:40,area:80,ftype:30,place:120,mode:4,pt:4,icon:8};
+STRF={by:30,pay:2,acct:80,acctA:1,typ:6,to:30,shop:80,cat:10,phone:20,model:80,phsrc:200,phq:80,finLoan:80,finIns:80,lm:4,dtype:12,ref:60,kind:8,item:300,name:120,plate:20,year:8,colour:40,engine:40,notes:1000,brand:40,state:40,area:80,ftype:30,place:120,mode:4,pt:4,icon:8};
 function clean(i){if(!i||typeof i!=='object'||Array.isArray(i))return null;if(typeof i.id!=='string'||!/^[\w.:-]{1,80}$/.test(i.id))return null;if(!['car','log','fuel','todo','svc','logo','doc','loan','shop','exp','wal'].includes(i.kind))return null;const o={};
 for(const k of Object.keys(i)){const v=i[k];
 if(NUMF.includes(k)){if(v==='')o[k]='';else if(v!=null&&v!==''){const n=+v;if(isFinite(n))o[k]=n}}
