@@ -322,19 +322,21 @@ const save=()=>{VER++;return kv('put','d',D).catch(e=>{logE('storage',e);toast('
 async function load(){try{const v=await kv('get','d');if(v){D.items=(v.items||[]).map(clean).filter(Boolean);D.cfg={...D.cfg,...v.cfg}}LOG=(await kv('get','log'))||[]}catch(e){logE('storage',e)}VER++}
 let CV=-1,CA={};const cached=(n,k,f)=>{if(CV!==VER){CV=VER;CA={}}const m=CA[n]||(CA[n]=new Map);if(!m.has(k))m.set(k,f());return m.get(k)},
 dlBlob=(b,n)=>{const a=document.createElement('a'),u=URL.createObjectURL(b);a.href=u;a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(u),6e4)};
+// Formatting is hot on big histories: reuse Intl formatters and remember date strings.
+const NF2=new Intl.NumberFormat('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2}),NF0=new Intl.NumberFormat('en-MY'),memo1=f=>{const m=new Map();return s=>{let v=m.get(s);if(v===undefined){v=f(s);if(m.size>4000)m.clear();m.set(s,v)}return v}},MLY=memo1(k=>new Date(k+'-01T00:00').toLocaleString('en-GB',{month:'long',year:'numeric'}));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7),
-live=k=>D.items.filter(i=>i.kind===k&&!i.deleted),
+live=k=>cached('live',k,()=>D.items.filter(i=>i.kind===k&&!i.deleted)).slice(),
 S=()=>cached('S','',()=>live('svc').sort((a,b)=>a.name.localeCompare(b.name))),
 cars=()=>live('car'),cur=()=>cars().find(c=>c.id===D.cfg.sel)||cars()[0],
 mine=k=>{const c=cur();return c?live(k).filter(i=>i.carId===c.id):[]},
 today=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)},
-rm=n=>'RM '+(+n||0).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2}),
-km=n=>(+n).toLocaleString('en-MY')+' km',
-fd=s=>s?new Date(s+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'',
+rm=n=>'RM '+NF2.format(+n||0),
+km=n=>NF0.format(+n)+' km',
+fd=memo1(s=>s?new Date(s+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):''),
 odoOf=id=>cached('odo',id,()=>Math.max(+(D.items.find(i=>i.id===id)||{}).odo||0,...D.items.filter(i=>i.carId===id&&!i.deleted&&(i.kind==='log'||i.kind==='fuel')).map(i=>+i.odo||0))),odoNow=()=>cur()?odoOf(cur().id):0,
 st=t=>{t=eff(t);if(t.sz&&today()<t.sz)return 0;const{dd,dk}=dl(t),a=[dd===null?null:dd<0?2:dd<=30?1:0,dk===null?null:dk<=0?2:dk<=500?1:0].filter(x=>x!==null);return a.length?(t.mode==='and'?Math.min(...a):Math.max(...a)):0},
 msg=t=>{const e=$('#msg');if(e)e.textContent=t},
-cf=(k,v)=>{D.cfg[k]=v;save()},go=(t,np,na)=>{if(!np&&SL[t]&&location.hash!=='#'+SL[t])try{history.pushState(null,'','#'+SL[t])}catch(e){}tab=t;Q='';SF='';RFL='';SHOW=60;FSRCH=0;fab(0);render();if(!na){const v=$('#v');v.classList.remove('an');void v.offsetWidth;v.classList.add('an');setTimeout(()=>v.classList.remove('an'),350)}scrollTo(0,0)};
+cf=(k,v)=>{D.cfg[k]=v;save()},go=(t,np,na)=>{if(!np&&SL[t]&&location.hash!=='#'+SL[t])try{history.pushState(null,'','#'+SL[t])}catch(e){}tab=t;Q='';SF='';RFL='';SHOW=60;FSRCH=0;fab(0);render();if(!na){const v=$('#v');v.classList.remove('an');requestAnimationFrame(()=>{v.classList.add('an');setTimeout(()=>v.classList.remove('an'),350)})}scrollTo(0,0)};
 function viewOf(t){const k=[tab,Q,SF,RFL,SHOW,FSRCH];tab=t;Q='';SF='';RFL='';SHOW=60;FSRCH=0;try{return body()}catch(e){return ''}finally{[tab,Q,SF,RFL,SHOW,FSRCH]=k}}
 function addSvc(n,seed){n=n.replace(/,/g,' ').trim();if(!n)return;const id='svc-'+(n.toLowerCase().replace(/[^a-z0-9]+/g,'-')||uid());let s=D.items.find(i=>i.id===id);
 if(s&&seed)return;if(!s){s={id,kind:'svc'};D.items.push(s)}Object.assign(s,{name:n,deleted:0,updated:seed?1:Date.now()})}
@@ -443,7 +445,9 @@ return `<div class="c fz"><div class="r"><span class="m">Fuel spend</span><div c
 ${pts.length&&!(kind==='line'&&pts.length<2)?chart('fc',pts,{kind,avg:FMET==='eco'?AV:0,fmt:FMET==='eco'?v=>v.toFixed(1):FMET==='price'?v=>v.toFixed(2):v=>'RM '+fmtN(v)}):`<div class="fch m">${FMET==='eco'?'Log two full tanks in this period to see your economy.':'Not enough fill-ups in this period yet.'}</div>`}</div>`}
 // One chart style for the whole app. p: [{v, v2?, l?, t}] (t = readout HTML, already escaped); o: {kind:'line'|'bar', avg, fmt}
 const CHS={};
-function chart(id,p,o){o=o||{};const kind=o.kind||'line',fmt=o.fmt||(v=>String(Math.round(v))),W=Math.max(300,Math.min(980,Math.round((($('#v')||{}).clientWidth||330)-30))),H=W>560?170:122,B=H-14,T=12,n=p.length,
+// Width of the content column, read once and kept fresh by a ResizeObserver (reading it per chart forced a layout each time).
+let VW0=0;function vW(){if(!VW0){const v=$('#v');VW0=(v&&v.clientWidth)||330;if(v&&window.ResizeObserver&&!vW.o){vW.o=new ResizeObserver(e=>{const w=Math.round(e[0].contentRect.width);if(w&&Math.abs(w-VW0)>2){VW0=w;clearTimeout(vW.t);vW.t=setTimeout(()=>{if(!document.querySelector('dialog[open]'))render()},120)}});vW.o.observe(v)}}return VW0}
+function chart(id,p,o){o=o||{};const kind=o.kind||'line',fmt=o.fmt||(v=>String(Math.round(v))),W=Math.max(300,Math.min(980,Math.round(vW()-30))),H=W>560?170:122,B=H-14,T=12,n=p.length,
 vs=p.map(x=>x.v+(kind==='bar'?(x.v2||0):0)),lo0=kind==='bar'?0:Math.min(...vs,o.avg||Infinity),hi0=Math.max(...vs,o.avg||0)||1,pad=kind==='bar'?hi0*.06:(hi0-lo0)*.15||.5,
 lo=kind==='bar'?0:lo0-pad,top=hi0+pad,y=v=>+(B-(v-lo)/(top-lo)*(B-T)).toFixed(1);let g=`<line class="cg" x1="0" x2="${W}" y1="${y(hi0)}" y2="${y(hi0)}"/><line class="cg" x1="0" x2="${W}" y1="${B}" y2="${B}"/><text x="0" y="${y(hi0)-4}">${E(fmt(hi0))}</text>`,mk='',xy=[];
 if(o.avg)g+=`<line class="fav" x1="0" x2="${W}" y1="${y(o.avg)}" y2="${y(o.avg)}"/><text x="${W}" y="${y(o.avg)-4}" text-anchor="end">avg ${E(fmt(o.avg))}</text>`;
@@ -480,12 +484,12 @@ function fuelList(F,FQ,M,AV,BEST){const br={};F.forEach(i=>{const b=i.brand||'Ot
 let h=`<div class="sh"><span>History</span><button class="lnk" onclick="FSRCH=!FSRCH;if(!FSRCH)Q='';render();FSRCH&&setTimeout(()=>{const q=$('#q');q&&q.focus()},30)" aria-label="Search fill-ups">${FSRCH||Q?'Close':'Search'}</button></div>`+(FSRCH||Q?sb():'')+
 (bs.length>1?`<div class="ftabs">${[['','All'],...bs.map(b=>[b,b])].map(([k,l])=>`<button class="${SF===k?'on':''}" data-f="${E(k)}" onclick="setSF(this.dataset.f)">${k?`<i style="background:${BC[k]||'#555'}"></i>`:''}${E(l)}</button>`).join('')}</div>`:'')+fuelSum(FQ,M);
 if(!FQ.length)return h+'<p class="m">No matches.</p>';const g={},T={};FQ.forEach(i=>{const k=(i.date||'').slice(0,7);T[k]=(T[k]||0)+(+i.cost||0)});FQ.slice(0,SHOW).forEach(i=>{const k=(i.date||'').slice(0,7);(g[k]=g[k]||[]).push(i)});
-return h+Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${k?new Date(k+'-01T00:00').toLocaleString('en-GB',{month:'long',year:'numeric'}):'No date'}</span><span>${rm(T[k])}</span></div><div class="flist">`+g[k].map(i=>{const e=M[i.id];
+return h+Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${k?MLY(k):'No date'}</span><span>${rm(T[k])}</span></div><div class="flist">`+g[k].map(i=>{const e=M[i.id];
 return `<div class="frow" onclick="openU('${E(i.id)}')"><i class="fdot" style="background:${BC[i.brand]||'#555'}"></i><div class="fmid"><b>${E([i.brand,i.ftype].filter(Boolean).join(' · ')||i.place||'Fill-up')}</b><div class="m">${sd(i.date)} · ${(+i.litres||0).toFixed(1)} L${+i.ppl?' · RM '+(+i.ppl).toFixed(2):''}${byT(i)}</div></div><div class="fend"><b>${rm(i.cost)}</b><div class="m">${i.full===0?'Partial':e?e.y.toFixed(1)+' km/L'+(i.id===BEST?' · best':dlt(e.y,AV)):''}</div></div></div>`}).join('')+'</div>').join('')+
 (FQ.length>SHOW?`<button class="g mt" style="width:100%" onclick="SHOW+=120;render()">Show older fill-ups (${FQ.length-SHOW} more)</button>`:'')}
 const LEG='',tp=(id,t)=>{const e=$('#'+id);if(e)e.textContent=t};
 function bars(d,id){let s=0;while(s<d.length-1&&!(d[s].a+d[s].b))s++;d=d.slice(s);const tt=d.reduce((t,x)=>t+x.a+x.b,0);if(!tt)return '<p class="m">Nothing spent in this period.</p>';
-const hA=d.some(x=>x.a),hB=d.some(x=>x.b),nm=k=>k.length===4?k:new Date(k+'-01T00:00').toLocaleString('en-GB',{month:'long',year:'numeric'});
+const hA=d.some(x=>x.a),hB=d.some(x=>x.b),nm=k=>k.length===4?k:MLY(k);
 return chart(id,d.map(x=>({v:x.a,v2:x.b,l:x.l,t:`<b>${nm(x.k)}</b> · ${rm(x.a+x.b)}`+(hA&&hB?`<div class="m"><i class="kd"></i>Fuel ${rm(x.a)}<i class="kd s"></i>Services ${rm(x.b)}</div>`:'')})),{kind:'bar',avg:tt/d.length,fmt:v=>'RM '+fmtN(v)})}
 function line(p,u,id){if(p.length<2)return '<p class="m">Add at least two fill-ups to see this chart.</p>';const pr=u==='RM',av=p.reduce((s,x)=>s+x.y,0)/p.length;
 return chart(id,p.map(x=>({v:x.y,l:sd(x.d),t:`<b>${fd(x.d)}</b> · ${pr?'RM '+x.y.toFixed(2)+'/L':x.y.toFixed(1)+' '+E(u)}`})),{kind:'line',avg:av,fmt:v=>v.toFixed(pr?2:1)})}
@@ -498,11 +502,11 @@ function preset(m){const n=new Date();RT=today();if(m==='y')RF=n.getFullYear()+'
 function health(ef){if(!ef.length)return '';const sm=a=>a.reduce((s,e)=>s+e.km,0)/(a.reduce((s,e)=>s+e.l,0)||1),all=sm(ef),k=ef.length>=4?3:1,rec=sm(ef.slice(-k)),base=ef.length>=4?sm(ef.slice(0,-3)):all,d=(rec-base)/base*100,ys=ef.map(e=>e.y),few=ef.length<3,c=few?'':d<-20?'s2':d<-10?'s1':'s0';
 return `<div class="c fz"><div class="m">Fuel efficiency</div><div class="r mt"><span>Average</span><b>${all.toFixed(1)} km/L</b></div><div class="r"><span>Latest ${k>1?k+' fill-ups':'fill-up'}</span><b>${rec.toFixed(1)} km/L</b></div><div class="r"><span>Best / worst</span><b>${Math.max(...ys).toFixed(1)} / ${Math.min(...ys).toFixed(1)} km/L</b></div><div class="r"><span>Per 100 km</span><b>${(100/all).toFixed(1)} L</b></div>${rg(all)}
 <div class="mt ${c}"><b>${few?'Add a few more fill-ups for a reliable read.':d<-20?'Dropped noticeably':d<-10?'Slightly down':'Looks normal'}</b></div><div class="m">${few?'':d<-10?'Check tyre pressure, air filter and spark plugs. A big drop can also point to an O2 sensor or engine problem, so have it checked. ':'Compared with your earlier fill-ups. '}A guide only: it assumes you fill to full each time.</div></div>`}
-const dmy=s=>s?s.split('-').reverse().join('/'):'',sd=d=>d?new Date(d+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'',mns=(f,t)=>(t.slice(0,4)-f.slice(0,4))*12+(+t.slice(5,7))-(+f.slice(5,7))+1,
+const dmy=s=>s?s.split('-').reverse().join('/'):'',sd=memo1(d=>d?new Date(d+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}):''),mns=(f,t)=>(t.slice(0,4)-f.slice(0,4))*12+(+t.slice(5,7))-(+f.slice(5,7))+1,
 ico=n=>{const x=S().find(v=>v.name===n);return x&&x.icon||gico(n)},gico=n=>{n=String(n||'').toLowerCase();for(const[k,v]of[['brake fluid','💧'],['cabin','🍃'],['air filter','💨'],['oil','🛢️'],['brake','🛑'],['tyre','🛞'],['tire','🛞'],['wheel','🎯'],['alignment','🎯'],['battery','🔋'],['wiper','🌧️'],['spark','⚡'],['coolant','❄️'],['aircond','❄️'],['air cond','❄️'],['transmission','⚙️'],['atf','⚙️'],['gear','⚙️'],['timing','⏱️'],['belt','⏱️'],['road tax','🧾'],['roadtax','🧾'],['insurance','🛡️'],['wash','🧽'],['clutch','🦶'],['light','💡'],['bulb','💡'],['suspension','🪝'],['absorber','🪝'],['filter','🌀']])if(n.includes(k))return v;return '🔧'};
 function icSvc(id){const x=D.items.find(i=>i.id===(id||($('#ss')||{}).value));if(!x)return;const v=prompt('Type an emoji for this item, e.g. 🛢️ or 🛞',x.icon||'');if(v!==null)setSvc(x.id,{icon:v.trim().slice(0,4)})}
 function tl(a,row){const g={},T={};a.forEach(i=>{const k=(i.date||'').slice(0,7);T[k]=(T[k]||0)+(+i.cost||0)});a.slice(0,SHOW).forEach(i=>{const k=(i.date||'').slice(0,7);(g[k]=g[k]||[]).push(i)});
-return '<div class="tl">'+Object.keys(g).sort().reverse().map(k=>`<div class="mh"><div class="m">${new Date(k+'-01T00:00').toLocaleString('en-GB',{month:'long',year:'numeric'}).toUpperCase()}</div><b>${rm(T[k])}</b></div>`+g[k].map(row).join('')).join('')+'</div>'+(a.length>SHOW?`<button class="g mt" style="width:100%" onclick="SHOW+=120;render()">Show older entries (${a.length-SHOW} more)</button>`:'')}
+return '<div class="tl">'+Object.keys(g).sort().reverse().map(k=>`<div class="mh"><div class="m">${MLY(k).toUpperCase()}</div><b>${rm(T[k])}</b></div>`+g[k].map(row).join('')).join('')+'</div>'+(a.length>SHOW?`<button class="g mt" style="width:100%" onclick="SHOW+=120;render()">Show older entries (${a.length-SHOW} more)</button>`:'')}
 function mk(fr,to,yr){const a=new Date(fr+'T00:00'),z=new Date(to+'T00:00'),n=mns(fr,to),B=[];
 if(yr)for(let y=a.getFullYear();y<=z.getFullYear();y++)B.push({k:''+y,l:''+y,a:0,b:0});else for(let i=0;i<n;i++){const d=new Date(a.getFullYear(),a.getMonth()+i,1);B.push({k:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),l:d.toLocaleString('en-GB',{month:'short'})+(n>12?' '+String(d.getFullYear()).slice(2):''),a:0,b:0})}
 return B}
@@ -585,7 +589,7 @@ function setOdo(){if(!cur())return;const v=prompt('Current odometer reading (km)
 function setOdoV(v){const c=cur();if(!c)return;const n=+String(v).replace(/[^0-9]/g,'');if(!n)return;
 const mx=Math.max(0,...D.items.filter(i=>i.carId===c.id&&!i.deleted&&(i.kind==='log'||i.kind==='fuel')).map(i=>+i.odo||0));if(n<mx)return alert('That is lower than your latest entry ('+km(mx)+').');
 if(n>odoNow()+3000&&!confirm('That is '+km(n-odoNow())+' more than now. Is that right?'))return;c.odo=n;c.odoAt=today();c.updated=Date.now();commit();toast('Odometer updated to '+km(n))}
-const sheet=h=>{$('#gdc').innerHTML=h;const d=$('#gd');if(!d.open)d.showModal();d.scrollTop=0},fmtN=n=>Math.round(n).toLocaleString('en-MY'),
+const sheet=h=>{$('#gdc').innerHTML=h;const d=$('#gd');if(!d.open)d.showModal();d.scrollTop=0},fmtN=n=>NF0.format(Math.round(n)),
 wk=d=>{const x=new Date(d+'T00:00');x.setDate(x.getDate()-((x.getDay()+6)%7));return iso(x)},wkPrev=k=>{const x=new Date(k+'T00:00');x.setDate(x.getDate()-7);return iso(x)},
 wks=()=>new Set([...live('log'),...live('fuel')].map(i=>i.date).filter(Boolean).map(wk));
 function streak(){const S=wks();let k=wk(today());if(!S.has(k))k=wkPrev(k);let n=0;while(S.has(k)){n++;k=wkPrev(k)}return n}
@@ -711,7 +715,7 @@ const LF=L.filter(fq).filter(sfq).sort((a,b)=>(b.date||'').localeCompare(a.date|
 h+=(FSRCH||Q?sb():'')+(top.length>1?`<div class="ftabs">${[['','All'],...top.map(n=>[n,n])].map(([k,l])=>`<button class="${SF===k?'on':''}" data-f="${E(k)}" onclick="setSF(this.dataset.f)">${E(l)}</button>`).join('')}</div>`:'')+svcSum(LF);
 if(!LF.length)return h+'<p class="m">'+(Q||SF?'No matches.':'No services yet. Tap + to add one.')+'</p>';
 const g={},T={};LF.forEach(i=>{const k=(i.date||'').slice(0,7);T[k]=(T[k]||0)+(+i.cost||0)});LF.slice(0,SHOW).forEach(i=>{const k=(i.date||'').slice(0,7);(g[k]=g[k]||[]).push(i)});
-return h+Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${k?new Date(k+'-01T00:00').toLocaleString('en-GB',{month:'long',year:'numeric'}):'No date'}</span><span>${rm(T[k])}</span></div><div class="flist">`+g[k].map(i=>{const its=(i.item||'').split(', ').filter(Boolean),sub=[sd(i.date),i.odo?km(i.odo):'',i.shop?E(i.shop):'',its.length>1?its.length+' items':'',i.ph?'📎':'',byT(i).slice(3)].filter(Boolean).join(' · ');
+return h+Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${k?MLY(k):'No date'}</span><span>${rm(T[k])}</span></div><div class="flist">`+g[k].map(i=>{const its=(i.item||'').split(', ').filter(Boolean),sub=[sd(i.date),i.odo?km(i.odo):'',i.shop?E(i.shop):'',its.length>1?its.length+' items':'',i.ph?'📎':'',byT(i).slice(3)].filter(Boolean).join(' · ');
 return `<div class="frow" onclick="openF('log','${E(i.id)}')"><span class="dico">${E(ico(its[0]||''))}</span><div class="fmid"><b>${E(i.item||'Service')}</b><div class="m">${sub}</div>${i.notes?`<div class="m">${E(i.notes)}</div>`:''}</div><div class="fend"><b>${i.cost!==''&&i.cost!=null?rm(i.cost):''}</b></div></div>`}).join('')+'</div>').join('')+
 (LF.length>SHOW?`<button class="g mt" style="width:100%" onclick="SHOW+=120;render()">Show older services (${LF.length-SHOW} more)</button>`:'')}
 // ---- Reports: one overview card instead of greeting + health ring + budget ----
@@ -891,7 +895,7 @@ return `<div class="c fz cl" onclick="xSheet()"><div class="r"><span class="m">T
 function xSheet(){const X=mine('exp').sort((a,b)=>(b.date||'').localeCompare(a.date||'')),g={};X.forEach(i=>{(g[(i.date||'').slice(0,7)]=g[(i.date||'').slice(0,7)]||[]).push(i)});
 sheet(`<h2>Tolls, parking &amp; other</h2><div class="btns"><button class="btn sm" onclick="openX()">+ Add</button><button class="btn sm" onclick="$('#xcsv').click()">⬆ Import CSV</button></div><input id="xcsv" type="file" accept=".csv,text/csv,text/plain" hidden onchange="xImport(this)">
 <p class="m">CSV from the Touch ’n Go card portal, your bank, or any spreadsheet with a date, description and amount. Tolls and parking are picked out by name.</p>
-${X.length?Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${new Date(k+'-01T00:00').toLocaleString('en-GB',{month:'long',year:'numeric'})}</span><span>${rm(g[k].reduce((s,i)=>s+(+i.cost||0),0))}</span></div><div class="flist">${g[k].slice(0,80).map(i=>`<div class="frow" onclick="openX('${E(i.id)}')"><span class="dico">${xc(i.cat)[1]}</span><div class="fmid"><b>${E(i.place||xc(i.cat)[2])}</b><div class="m">${sd(i.date)} · ${xc(i.cat)[2]}${i.notes?' · '+E(i.notes):''}${byT(i)}</div></div><div class="fend"><b>${rm(i.cost)}</b></div></div>`).join('')}</div>`).join(''):'<p class="m">Nothing logged yet.</p>'}`)}
+${X.length?Object.keys(g).sort().reverse().map(k=>`<div class="fmh"><span>${MLY(k)}</span><span>${rm(g[k].reduce((s,i)=>s+(+i.cost||0),0))}</span></div><div class="flist">${g[k].slice(0,80).map(i=>`<div class="frow" onclick="openX('${E(i.id)}')"><span class="dico">${xc(i.cat)[1]}</span><div class="fmid"><b>${E(i.place||xc(i.cat)[2])}</b><div class="m">${sd(i.date)} · ${xc(i.cat)[2]}${i.notes?' · '+E(i.notes):''}${byT(i)}</div></div><div class="fend"><b>${rm(i.cost)}</b></div></div>`).join('')}</div>`).join(''):'<p class="m">Nothing logged yet.</p>'}`)}
 function openX(id){const c=cur();if(!c)return;const x=id?D.items.find(i=>i.id===id)||{}:{date:today(),cat:'toll'};
 sheet(`<h2>${id?'Edit':'Add'} toll, parking or other</h2><div class="seg2" id="xcat" style="margin:6px 0 4px">${XC.map(([k,ic,l])=>`<button class="${x.cat===k?'on':''}" data-k="${k}" onclick="[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this))">${ic} ${l}</button>`).join('')}</div>
 <div class="row mt"><div><label for="xd">Date</label><input id="xd" type="date" value="${E(x.date||today())}"></div><div><label for="xa">Amount (RM)</label><input id="xa" type="number" inputmode="decimal" step="0.01" min="0" value="${x.cost||''}"></div></div>
@@ -1101,7 +1105,7 @@ $('#gd').close();if(n){commit();go('todo');toast('Added '+n+' reminder'+(n>1?'s'
 function bdg(){if(!('Notification' in window))return toast('Open Garage from your Home Screen first');Notification.requestPermission().then(p=>{toast(p==='granted'?'Icon badge turned on':'Permission was not given');render()})}
 function badge(){if(!navigator.setAppBadge)return;const n=cars().reduce((s,c)=>s+remOf(c).filter(i=>st(i)>0).length,0);(n?navigator.setAppBadge(n):navigator.clearAppBadge()).catch(()=>{})}
 function memo(f){let k,v;return function(){const kk=VER+'|'+(D.cfg.sel||'')+'|'+today();if(kk!==k){v=f();k=kk}return v}}
-const APP_V='2026.11.27a',CODE_V=8;let DRE='',MISS=[];
+const APP_V='2026.11.27b',CODE_V=8;let DRE='',MISS=[];
 const logE=(a,m)=>{const x={t:Date.now(),a:String(a),m:String((m&&m.message)||m||'').replace(/token[^,;]*/gi,'token …').slice(0,300)};LOG.unshift(x);if(LOG.length>100)LOG.length=100;kv('put','log',LOG).catch(()=>{})};
 addEventListener('error',e=>logE('app',(e.message||'Error')+(e.lineno?' (line '+e.lineno+')':'')));addEventListener('unhandledrejection',e=>logE('app',e.reason));
 const okUrl=u=>/^https:\/\/script\.google\.com\/(a\/macros\/[\w.-]+|macros)\/s\/[\w-]{20,}\/(exec|dev)$/.test(u||'');
@@ -1305,8 +1309,9 @@ navigator.serviceWorker.addEventListener('message',e=>{if(e.data==='updated'||(e
 addEventListener('popstate',()=>{const d=document.querySelector('dialog[open]');if(d){d.close();try{history.pushState(null,'','#'+SL[tab])}catch(e){}return}const h=location.hash.slice(1);if(cur()&&(h==='add-fuel'||h==='add-service')){go(h==='add-fuel'?'fuel':'log');return h==='add-fuel'?openU():openF('log')}const t=LS[h]||'rep';if(t!==tab)go(t,1)});
 {const _r3=render;render=function(){_r3();pill();clearTimeout(AT);AT=setTimeout(()=>{try{achCheck()}catch(e){}try{badge()}catch(e){}if(tab==='set')stq()},250)}}
 {const _r4=render;render=function(){_r4();navInd()}}
-function navInd(){const i=$('#navi'),b=document.querySelector('nav button.on');if(!i||!b||!i.offsetParent)return;i.style.height=b.offsetHeight+'px';i.style.transform='translateY('+b.offsetTop+'px)';if(!i.classList.contains('ok'))requestAnimationFrame(()=>i.classList.add('ok'))}
-addEventListener('resize',()=>{clearTimeout(navInd.t);navInd.t=setTimeout(navInd,100)});
+const NAVMQ=matchMedia('(min-width:1100px)');function navInd(){if(!NAVMQ.matches)return;cancelAnimationFrame(navInd.f);navInd.f=requestAnimationFrame(navPos)}
+function navPos(){const i=$('#navi'),b=document.querySelector('nav button.on');if(!i||!b||!i.offsetParent)return;i.style.height=b.offsetHeight+'px';i.style.transform='translateY('+b.offsetTop+'px)';if(!i.classList.contains('ok'))requestAnimationFrame(()=>i.classList.add('ok'))}
+addEventListener('resize',()=>{clearTimeout(navPos.t);navPos.t=setTimeout(navInd,100)});
 hs=memo(hs);achs=memo(achs);streak=memo(streak);
 load().then(()=>{try{fpMig()}catch(e){}setTimeout(()=>fpAutoLoad(),1500);PREV=D.cfg.seen||'';if(D.cfg.seen!==today()){D.cfg.seen=today();save()}if(!D.cfg.seeded){DEF.forEach(n=>addSvc(n,1));D.cfg.seeded=1;save()}if(JOINH)setTimeout(()=>joinCheck(JOINH),300);const hs0=location.hash.slice(1);if(LS[hs0])tab=LS[hs0];render();if(cur()&&(hs0==='add-fuel'||hs0==='add-service')){go(hs0==='add-fuel'?'fuel':'log');hs0==='add-fuel'?openU():openF('log')}else if(!LS[hs0])try{history.replaceState(null,'','#'+SL[tab])}catch(e){}navigator.storage&&navigator.storage.persist&&navigator.storage.persist();sync()});
 </script><div id="prt" aria-hidden="true"></div></body></html>
